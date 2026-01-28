@@ -1,0 +1,191 @@
+-- Справочник ролей
+CREATE TABLE role (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(20)
+);
+
+-- Справочник полов
+CREATE TABLE gender (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(10)
+);
+
+-- Справочник способов доставки
+CREATE TABLE delivery_method (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(20)
+);
+
+-- Справочник статусов заказа
+CREATE TABLE order_status (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(20)
+);
+
+-- Справочник статусов транзакции
+CREATE TABLE transaction_status (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(20)
+);
+
+-- Категории товаров
+CREATE TABLE category (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT
+);
+
+-- Пользователи
+CREATE TABLE user (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    phone VARCHAR(20),
+    created_at DATETIME,
+    is_active TINYINT(1),
+    role_id INT NOT NULL,
+    FOREIGN KEY (role_id) REFERENCES role(id)
+);
+
+-- Верификация email
+CREATE TABLE email_verification (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    created_at DATETIME,
+    expires_at DATETIME NOT NULL,
+    is_used TINYINT(1),
+    FOREIGN KEY (user_id) REFERENCES user(id)
+);
+
+-- Размеры
+CREATE TABLE size (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(20) NOT NULL
+);
+
+-- Цвета
+CREATE TABLE color (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    hex_code CHAR(7)
+);
+
+-- Товары
+CREATE TABLE product (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price float NOT NULL,
+    category_id INT,
+    gender_id INT,
+    age_group VARCHAR(20),
+    material VARCHAR(255),
+    care_instructions TEXT,
+    created_at DATETIME,
+    updated_at DATETIME,
+    FOREIGN KEY (category_id) REFERENCES category(id),
+    FOREIGN KEY (gender_id) REFERENCES gender(id)
+);
+
+CREATE TABLE product_variant (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    size_id INT,
+    color_id INT,
+    stock_quantity INT NOT NULL,
+    FOREIGN KEY (product_id) REFERENCES product(id),
+    FOREIGN KEY (size_id) REFERENCES size(id),
+    FOREIGN KEY (color_id) REFERENCES color(id)
+);
+
+-- Изображения товаров
+CREATE TABLE product_image (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    image_url TEXT NOT NULL,
+    is_main TINYINT(1),
+    FOREIGN KEY (product_id) REFERENCES product(id)
+);
+
+-- Избранное (Wishlist)
+CREATE TABLE wishlist (
+    user_id INT NOT NULL,
+    product_id INT NOT NULL,
+    added_at DATETIME,
+    PRIMARY KEY (user_id, product_id),
+    FOREIGN KEY (user_id) REFERENCES user(id),
+    FOREIGN KEY (product_id) REFERENCES product(id)
+);
+
+-- Заказы
+CREATE TABLE `order` (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    total_amount float NOT NULL,
+    delivery_address TEXT NOT NULL,
+    delivery_method_id INT NOT NULL,
+    status_id INT NOT NULL,
+    created_at DATETIME,
+    updated_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES user(id),
+    FOREIGN KEY (delivery_method_id) REFERENCES delivery_method(id),
+    FOREIGN KEY (status_id) REFERENCES order_status(id)
+);
+
+-- Состав заказа
+CREATE TABLE order_item (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_variant_id INT NOT NULL,
+    quantity INT NOT NULL,
+    price_per_unit float NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES `order`(id),
+    FOREIGN KEY (product_variant_id) REFERENCES product_variant(id)
+);
+
+-- Транзакции
+CREATE TABLE transaction (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    payment_system VARCHAR(50) NOT NULL,
+    external_id VARCHAR(255) UNIQUE,
+    status_id INT NOT NULL,
+    created_at DATETIME,
+    updated_at DATETIME,
+    FOREIGN KEY (order_id) REFERENCES `order`(id),
+    FOREIGN KEY (status_id) REFERENCES transaction_status(id)
+);
+
+-- Отзывы
+CREATE TABLE review (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    user_id INT NOT NULL,
+    rating TINYINT,
+    comment TEXT,
+    created_at DATETIME,
+    is_moderated TINYINT(1),
+    FOREIGN KEY (product_id) REFERENCES product(id),
+    FOREIGN KEY (user_id) REFERENCES user(id),
+    UNIQUE(product_id, user_id)
+);
+-- Роли
+INSERT INTO role (name) VALUES ('user'), ('moderator'), ('admin');
+
+-- Пол
+INSERT INTO gender (name) VALUES ('men'), ('women'), ('unisex'), ('kids');
+
+-- Способы доставки
+INSERT INTO delivery_method (name) VALUES ('courier'), ('pickup');
+
+-- Статусы заказа
+INSERT INTO order_status (name) VALUES 
+('created'), ('paid'), ('shipped'), ('delivered'), ('cancelled');
+
+-- Статусы транзакций
+INSERT INTO transaction_status (name) VALUES 
+('pending'), ('succeeded'), ('failed'), ('refunded');
