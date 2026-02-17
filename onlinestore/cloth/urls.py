@@ -57,4 +57,12 @@ urlpatterns = [
     # Админ панель (изменено с /admin/dashboard/ на /dashboard/)
     path('dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('export/orders/', views.export_orders, name='export_orders'),
+
+    # Верификация email
+    path('verify-email/<uuid:token>/', views.verify_email, name='verify_email'),
+    path('resend-verification/', views.resend_verification, name='resend_verification'),
+
+    # Сброс пароля
+    path('forgot-password/', views.forgot_password, name='forgot_password'),
+    path('reset-password/<uuid:token>/', views.reset_password, name='reset_password'),
 ]

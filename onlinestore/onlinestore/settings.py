@@ -85,6 +85,22 @@ DATABASES = {
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
+
+# Настройки SMTP для Mail.ru
+EMAIL_HOST = 'smtp.mail.ru'
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+EMAIL_USE_TLS = False  # Важно: SSL и TLS взаимоисключающие
+
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'danil_naumov_90@bk.ru')
+
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'fDwwurqGAMSfNry3JlZU')
+
+DEFAULT_FROM_EMAIL = f'CLOTH. <{EMAIL_HOST_USER}>'
+
+# Таймаут для SMTP соединения (секунды)
+EMAIL_TIMEOUT = 30
+
 YOOKASSA_SHOP_ID = os.environ.get('YOOKASSA_SHOP_ID', '1225524')
 YOOKASSA_SECRET_KEY = os.environ.get('YOOKASSA_SECRET_KEY', 'test_-W5gL0m29-Vj5oYnjMBKZ62jHkNiMBFdsmiaZeGhiQs')
 

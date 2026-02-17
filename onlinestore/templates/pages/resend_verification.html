@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Подтверждение email{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="auth-container">
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+            <h2>Подтверждение email</h2>
+            
+            <p style="text-align: center; color: var(--text-secondary); margin-bottom: 20px;">
+                Введите ваш email, чтобы получить новое письмо с подтверждением
+            </p>
+            
+            <input type="email" name="email" placeholder="Ваш email" required>
+            
+            <button type="submit">Отправить письмо</button>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="{% url 'login' %}" style="color: var(--text-secondary);">Вернуться к входу</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

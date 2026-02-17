@@ -22,6 +22,9 @@ from decimal import Decimal
 import uuid
 import csv
 import json  # Добавлен этот импорт
+from .utils import send_verification_email, send_password_reset_email
+from .models import EmailVerification
+
 
 logger = logging.getLogger(__name__)
 
@@ -584,8 +587,6 @@ def yookassa_webhook(request):
 
     return JsonResponse({'status': 'method not allowed'}, status=405)
 
-
-# --- АУТЕНТИФИКАЦИЯ ---
 def register_view(request):
     """Регистрация"""
     if request.user.is_authenticated:
@@ -595,9 +596,14 @@ def register_view(request):
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
-            messages.success(request, 'Регистрация прошла успешно!')
-            return redirect("home")
+
+            # Отправляем письмо для подтверждения email
+            if send_verification_email(user, request):
+                messages.success(request, 'Регистрация прошла успешно! На вашу почту отправлено письмо для подтверждения email.')
+            else:
+                messages.warning(request, 'Регистрация прошла, но не удалось отправить письмо подтверждения. Свяжитесь с поддержкой.')
+
+            return redirect("login")
         else:
             for field, errors in form.errors.items():
                 for error in errors:
@@ -607,6 +613,108 @@ def register_view(request):
 
     return render(request, "pages/register.html", {"form": form})
 
+
+def verify_email(request, token):
+    """Подтверждение email"""
+    try:
+        verification = EmailVerification.objects.get(token=token, is_used=False)
+
+        if verification.is_valid():
+            # Активируем пользователя
+            user = verification.user
+            user.is_active = True
+            user.save()
+
+            # Помечаем токен как использованный
+            verification.is_used = True
+            verification.save()
+
+            messages.success(request, 'Email успешно подтвержден! Теперь вы можете войти в аккаунт.')
+            logger.info(f"Email verified for user {user.email}")
+        else:
+            messages.error(request, 'Ссылка устарела. Запросите подтверждение заново.')
+
+    except EmailVerification.DoesNotExist:
+        messages.error(request, 'Неверная ссылка подтверждения.')
+
+    return redirect('login')
+
+
+def resend_verification(request):
+    """Повторная отправка письма подтверждения"""
+    if request.method == 'POST':
+        email = request.POST.get('email')
+
+        try:
+            user = User.objects.get(email=email, is_active=False)
+
+            # Удаляем старые неиспользованные токены
+            EmailVerification.objects.filter(user=user, is_used=False).delete()
+
+            # Отправляем новое письмо
+            if send_verification_email(user, request):
+                messages.success(request, 'Письмо подтверждения отправлено повторно. Проверьте вашу почту.')
+            else:
+                messages.error(request, 'Не удалось отправить письмо. Попробуйте позже.')
+
+        except User.DoesNotExist:
+            messages.error(request, 'Пользователь с таким email не найден или уже активирован.')
+
+    return render(request, "pages/resend_verification.html")
+
+
+def forgot_password(request):
+    """Запрос на сброс пароля"""
+    if request.method == 'POST':
+        email = request.POST.get('email')
+
+        try:
+            user = User.objects.get(email=email, is_active=True)
+
+            if send_password_reset_email(user, request):
+                messages.success(request, 'Письмо для сброса пароля отправлено на вашу почту.')
+            else:
+                messages.error(request, 'Не удалось отправить письмо. Попробуйте позже.')
+
+        except User.DoesNotExist:
+            messages.error(request, 'Пользователь с таким email не найден.')
+
+    return render(request, "pages/forgot_password.html")
+
+
+def reset_password(request, token):
+    """Сброс пароля"""
+    try:
+        verification = EmailVerification.objects.get(token=token, is_used=False)
+
+        if not verification.is_valid():
+            messages.error(request, 'Ссылка устарела. Запросите сброс пароля заново.')
+            return redirect('forgot_password')
+
+        if request.method == 'POST':
+            password1 = request.POST.get('password1')
+            password2 = request.POST.get('password2')
+
+            if password1 != password2:
+                messages.error(request, 'Пароли не совпадают')
+            elif len(password1) < 8:
+                messages.error(request, 'Пароль должен содержать минимум 8 символов')
+            else:
+                user = verification.user
+                user.set_password(password1)
+                user.save()
+
+                verification.is_used = True
+                verification.save()
+
+                messages.success(request, 'Пароль успешно изменен! Теперь вы можете войти.')
+                return redirect('login')
+
+        return render(request, "pages/reset_password.html", {'token': token})
+
+    except EmailVerification.DoesNotExist:
+        messages.error(request, 'Неверная ссылка для сброса пароля.')
+        return redirect('forgot_password')
 
 def login_view(request):
     """Вход в систему"""

@@ -105,6 +105,10 @@ class EmailVerification(models.Model):
     class Meta:
         verbose_name = "Верификация email"
         verbose_name_plural = "Верификации email"
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['expires_at']),
+        ]
 
     def __str__(self):
         return f"{self.user.email} - {self.token}"

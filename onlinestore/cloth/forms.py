@@ -81,9 +81,11 @@ class RegisterForm(forms.ModelForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.set_password(self.cleaned_data['password1'])
+        user.is_active = False  # Делаем пользователя неактивным до подтверждения email
 
         # Назначаем роль по умолчанию
         try:
+            # Пытаемся получить существующую роль
             default_role = Role.objects.get(name='user')
         except Role.DoesNotExist:
             # Если роль не существует, создаем ее
@@ -123,7 +125,7 @@ class LoginForm(forms.Form):
             if not user:
                 raise ValidationError('Неверный email или пароль')
             if not user.is_active:
-                raise ValidationError('Аккаунт деактивирован')
+                raise ValidationError('Аккаунт деактивирован. Пожалуйста, подтвердите email.')
 
             self.user = user
 
@@ -161,6 +163,7 @@ class CheckoutForm(forms.ModelForm):
 
 class ReviewForm(forms.ModelForm):
     """Форма отзыва"""
+
     class Meta:
         model = Review
         fields = ['rating', 'comment']
@@ -186,6 +189,7 @@ class ReviewForm(forms.ModelForm):
 
 class UserProfileForm(forms.ModelForm):
     """Форма редактирования профиля"""
+
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'phone']
