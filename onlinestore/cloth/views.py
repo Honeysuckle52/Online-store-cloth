@@ -182,11 +182,11 @@ def product_detail(request, slug):
     # Проверка может ли пользователь оставить отзыв
     can_review = False
     if request.user.is_authenticated:
-        # Проверяем, есть ли у пользователя завершенные заказы этого товара
+        # Проверяем, есть ли у пользователя заказы этого товара (подтвержденные или доставленные)
         has_purchased = Order.objects.filter(
             user=request.user,
             items__variant__product=product,
-            status__name='delivered'
+            status__name__in=['confirmed', 'delivered', 'paid']
         ).exists()
         has_reviewed = Review.objects.filter(
             user=request.user,
@@ -217,15 +217,15 @@ def add_review(request, product_id):
         rating = request.POST.get('rating')
         comment = request.POST.get('comment')
 
-        # Проверяем, может ли пользователь оставить отзыв
+        # Проверяем, может ли пользоват��ль оставить отзыв
         has_purchased = Order.objects.filter(
             user=request.user,
             items__variant__product=product,
-            status__name='delivered'
+            status__name__in=['confirmed', 'delivered', 'paid']
         ).exists()
 
         if not has_purchased:
-            messages.error(request, 'Вы можете оставить отзыв только после получения заказа')
+            messages.error(request, 'Вы можете оставить отзыв только после оформления заказа с этим товаром')
             return redirect('product_detail', slug=product.slug)
 
         # Проверяем, не оставлял ли уже отзыв
@@ -460,12 +460,23 @@ def checkout(request):
                 # Перенаправляем на онлайн-оплату
                 return redirect('payment', order_id=order.id)
             else:
-                # Оплата при получении
-                status_paid, _ = OrderStatus.objects.get_or_create(name='paid')
-                order.status = status_paid
+                # Оплата при получении - статус "confirmed" (подтвержден, ожидает оплаты)
+                status_confirmed, _ = OrderStatus.objects.get_or_create(
+                    name='confirmed',
+                    defaults={'name': 'confirmed'}
+                )
+                order.status = status_confirmed
+                order.payment_method = 'cash'
                 order.save()
 
-                messages.success(request, 'Заказ оформлен! Оплата при получении.')
+                # Отправляем email с подтверждением заказа
+                try:
+                    from .utils import send_order_confirmation_email
+                    send_order_confirmation_email(order, request)
+                except Exception as e:
+                    logger.error(f"Failed to send order confirmation email: {e}")
+
+                messages.success(request, 'Заказ оформлен! Оплата наличными при получении.')
                 return redirect('order_detail', order_id=order.id)
     else:
         initial = {}

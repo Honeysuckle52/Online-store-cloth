@@ -399,6 +399,11 @@ class DeliveryMethod(models.Model):
 
 class Order(models.Model):
     """Заказ"""
+    PAYMENT_METHOD_CHOICES = [
+        ('yookassa', 'ЮKassa (Онлайн)'),
+        ('cash', 'Наличные при получении'),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders', verbose_name="Пользователь")
 
     order_number = models.CharField(max_length=50, unique=True, verbose_name="Номер заказа")
@@ -408,6 +413,8 @@ class Order(models.Model):
 
     delivery_method = models.ForeignKey(DeliveryMethod, on_delete=models.SET_NULL, null=True, blank=True,
                                         verbose_name="Способ доставки")
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='yookassa',
+                                     verbose_name="Способ оплаты")
     status = models.ForeignKey(OrderStatus, on_delete=models.PROTECT, related_name='orders', verbose_name="Статус")
 
     comment = models.TextField(blank=True, verbose_name="Комментарий")

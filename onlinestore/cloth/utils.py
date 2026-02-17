@@ -334,3 +334,201 @@ def send_password_reset_email(user, request):
     except Exception as e:
         logger.error(f"Failed to send password reset email to {user.email}: {e}")
         return False
+
+
+def send_order_confirmation_email(order, request):
+    """
+    Отправка письма о подтверждении заказа
+    """
+    try:
+        user = order.user
+        payment_method_display = order.get_payment_method_display()
+
+        # Формируем строку с товарами
+        items_html = ""
+        for item in order.items.all():
+            items_html += f"""
+            <tr>
+                <td style="padding: 15px; border-bottom: 1px solid #E9DBCB;">
+                    {item.variant.product.name}
+                    {f" ({item.variant.size.name})" if item.variant.size else ""}
+                    {f" - {item.variant.color.name}" if item.variant.color else ""}
+                </td>
+                <td style="padding: 15px; border-bottom: 1px solid #E9DBCB; text-align: center;">
+                    {item.quantity}
+                </td>
+                <td style="padding: 15px; border-bottom: 1px solid #E9DBCB; text-align: right;">
+                    {item.price_per_unit} ₽
+                </td>
+                <td style="padding: 15px; border-bottom: 1px solid #E9DBCB; text-align: right; font-weight: 600;">
+                    {item.total_price()} ₽
+                </td>
+            </tr>
+            """
+
+        subject = f'Заказ #{order.order_number} оформлен - CLOTH'
+
+        message = f"""
+        Здравствуйте, {user.get_full_name() or user.email}!
+
+        Ваш заказ #{order.order_number} успешно оформлен.
+
+        Сумма заказа: {order.total_amount} ₽
+        Способ оплаты: {payment_method_display}
+        Адрес доставки: {order.delivery_address}
+
+        Мы свяжемся с вами в ближайшее время для подтверждения заказа.
+
+        С уважением,
+        Команда CLOTH
+        """
+
+        html_message = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {{
+                    font-family: 'Inter', sans-serif;
+                    line-height: 1.6;
+                    color: #4A3F35;
+                    background-color: #FAF9F6;
+                    margin: 0;
+                    padding: 0;
+                }}
+                .container {{
+                    max-width: 650px;
+                    margin: 40px auto;
+                    background: white;
+                    border-radius: 24px;
+                    padding: 40px;
+                    border: 1px solid #E9DBCB;
+                    box-shadow: 0 10px 30px rgba(74, 63, 53, 0.1);
+                }}
+                .header {{
+                    text-align: center;
+                    margin-bottom: 30px;
+                }}
+                .logo {{
+                    font-family: 'Playfair Display', serif;
+                    font-size: 2rem;
+                    font-weight: 700;
+                    color: #4A3F35;
+                }}
+                .order-number {{
+                    font-size: 1.5rem;
+                    color: #D4A373;
+                    font-weight: 600;
+                    text-align: center;
+                    margin: 20px 0;
+                }}
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 25px 0;
+                }}
+                th {{
+                    background: #F2EDE4;
+                    padding: 15px;
+                    text-align: left;
+                    font-weight: 600;
+                    border-bottom: 2px solid #E9DBCB;
+                }}
+                .total-row {{
+                    background: #F2EDE4;
+                    font-weight: 700;
+                    font-size: 1.2rem;
+                }}
+                .info-box {{
+                    background: #FAF9F6;
+                    padding: 20px;
+                    border-radius: 12px;
+                    margin: 20px 0;
+                }}
+                .footer {{
+                    margin-top: 30px;
+                    padding-top: 20px;
+                    border-top: 1px solid #E9DBCB;
+                    text-align: center;
+                    color: #8C7E72;
+                    font-size: 0.9rem;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <div class="logo">CLOTH.</div>
+                </div>
+
+                <h2 style="text-align: center; color: #4A3F35;">Заказ успешно оформлен!</h2>
+
+                <div class="order-number">№ {order.order_number}</div>
+
+                <p>Здравствуйте, <strong>{user.get_full_name() or user.email}</strong>!</p>
+
+                <p>Спасибо за ваш заказ в интернет-магазине <strong>CLOTH</strong>. Ваш заказ успешно принят и находится в обработке.</p>
+
+                <div class="info-box">
+                    <p style="margin: 5px 0;"><strong>Способ оплаты:</strong> {payment_method_display}</p>
+                    <p style="margin: 5px 0;"><strong>Адрес доставки:</strong> {order.delivery_address}</p>
+                    {f'<p style="margin: 5px 0;"><strong>Комментарий:</strong> {order.comment}</p>' if order.comment else ''}
+                </div>
+
+                <h3 style="margin-top: 30px;">Состав заказа:</h3>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Товар</th>
+                            <th style="text-align: center;">Кол-во</th>
+                            <th style="text-align: right;">Цена</th>
+                            <th style="text-align: right;">Сумма</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {items_html}
+                        <tr class="total-row">
+                            <td colspan="3" style="padding: 20px; text-align: right;">Итого:</td>
+                            <td style="padding: 20px; text-align: right; color: #D4A373;">{order.total_amount} ₽</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style="margin-top: 30px;">Мы свяжемся с вами в ближайшее время для уточнения деталей и подтверждения доставки.</p>
+
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{request.build_absolute_uri('/profile/orders/')}" 
+                       style="display: inline-block; padding: 15px 40px; background: #D4A373; color: white; 
+                              text-decoration: none; border-radius: 50px; font-weight: 600;">
+                        Посмотреть заказ
+                    </a>
+                </div>
+
+                <div class="footer">
+                    <p>С уважением, команда CLOTH</p>
+                    <p style="margin-top: 10px;">
+                        <a href="https://cloth-store.ru" style="color: #D4A373; text-decoration: none;">cloth-store.ru</a>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+
+        logger.info(f"Order confirmation email sent to {user.email} for order {order.order_number}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to send order confirmation email for order {order.order_number}: {e}")
+        return False

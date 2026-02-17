@@ -69,7 +69,7 @@
 
                 <!-- Цена -->
                 <div style="margin-bottom: 25px;">
-                    <span style="font-size: 2rem; font-weight: 700; color: var(--accent-primary);">{{ product.price }} ₽</span>
+                    <span id="productPrice" style="font-size: 2rem; font-weight: 700; color: var(--accent-primary);">{{ product.price }} ₽</span>
                 </div>
 
                 <!-- Описание -->
@@ -244,7 +244,15 @@ function selectVariant(button, variantId, price) {
     selectedVariantId = variantId;
     selectedPrice = price;
 
+    // Обновляем цену на странице
+    document.getElementById('productPrice').textContent = price + ' ₽';
+
+    // Обновляем скрытое поле с ID варианта
     document.getElementById('selectedVariantId').value = variantId;
+
+    // Обновляем action формы для корзины
+    const form = document.getElementById('addToCartForm');
+    form.action = `/cart/add/${variantId}/`;
 }
 
 function setRating(value) {
