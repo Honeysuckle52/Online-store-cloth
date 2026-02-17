@@ -161,3 +161,73 @@ function showNotification(message, type = 'success') {
         setTimeout(() => notification.remove(), 300);
     }, 5000);
 }
+
+// Мобильный фильтр
+document.addEventListener('DOMContentLoaded', function() {
+    const filterSidebar = document.querySelector('.filters-sidebar');
+    const filterToggle = document.querySelector('.mobile-filter-toggle');
+
+    if (filterToggle && filterSidebar) {
+        filterToggle.addEventListener('click', function() {
+            filterSidebar.classList.toggle('active');
+            document.body.style.overflow = filterSidebar.classList.contains('active') ? 'hidden' : '';
+        });
+
+        // Закрыть фильтр при клике вне его
+        filterSidebar.addEventListener('click', function(e) {
+            if (e.target === filterSidebar) {
+                filterSidebar.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+    }
+
+    // Сворачивание секций фильтра
+    const filterTitles = document.querySelectorAll('.filter-title');
+    filterTitles.forEach(title => {
+        title.addEventListener('click', function() {
+            this.classList.toggle('active');
+            const content = this.nextElementSibling;
+            if (content.classList.contains('filter-content')) {
+                content.classList.toggle('collapsed');
+            }
+        });
+    });
+
+    // Автоматическое скрытие уведомлений
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            alert.style.animation = 'fadeOut 0.3s ease';
+            setTimeout(() => {
+                if (alert.parentElement) {
+                    alert.remove();
+                }
+            }, 300);
+        }, 5000);
+    });
+});
+
+// Функция для показа уведомлений
+function showNotification(message, type = 'info') {
+    const container = document.querySelector('.messages-container');
+    if (!container) {
+        const newContainer = document.createElement('div');
+        newContainer.className = 'messages-container';
+        document.body.appendChild(newContainer);
+    }
+
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type}`;
+    notification.innerHTML = `
+        ${message}
+        <button class="btn-close" onclick="this.parentElement.remove()">×</button>
+    `;
+
+    document.querySelector('.messages-container').appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
+}

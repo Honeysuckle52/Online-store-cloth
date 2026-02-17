@@ -42,19 +42,18 @@
                         {% if user.role.name == 'moderator' or user.role.name == 'admin' or user.is_staff %}
                         <div style="height: 1px; background: var(--border-color); margin: 0.5rem 0;"></div>
                         <a class="dropdown-item" href="{% url 'moderate_reviews' %}" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: var(--text-primary);">
-                            <i class="bi bi-chat" style="margin-right: 8px;"></i>Модерация отзывов
+                            </i>Модерация отзывов
                         </a>
                         <a class="dropdown-item" href="{% url 'manage_products' %}" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: var(--text-primary);">
-                            <i class="bi bi-grid" style="margin-right: 8px;"></i>Управление товарами
+                            </i>Управление товарами
                         </a>
                         {% endif %}
 
                         {% if user.is_superuser or user.role.name == 'admin' %}
                         <a class="dropdown-item" href="{% url 'admin_dashboard' %}">Панель управления</a>
-                            <i class="bi bi-speedometer2" style="margin-right: 8px;"></i>Панель управления
                         </a>
                         <a class="dropdown-item" href="/admin/" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: var(--text-primary);">
-                            <i class="bi bi-gear" style="margin-right: 8px;"></i>Django Admin
+                            </i>Django Admin
                         </a>
                         {% endif %}
 
