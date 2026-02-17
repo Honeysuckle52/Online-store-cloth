@@ -15,7 +15,7 @@ from .models import (
     DeliveryMethod, Transaction, TransactionStatus,
     Size, Color, Gender, ProductImage
 )
-from .forms import RegisterForm, LoginForm, CheckoutForm, ReviewForm
+from .forms import RegisterForm, LoginForm, CheckoutForm, ReviewForm, UserProfileForm, ChangePasswordForm
 from .payments import PaymentService  # Импорт сервиса платежей
 import logging
 from decimal import Decimal
@@ -24,7 +24,6 @@ import csv
 import json  # Добавлен этот импорт
 from .utils import send_verification_email, send_password_reset_email
 from .models import EmailVerification
-
 
 logger = logging.getLogger(__name__)
 
@@ -285,11 +284,6 @@ def toggle_wishlist(request, product_id):
 def cart_view(request):
     """Просмотр корзины"""
     cart, created = Cart.objects.get_or_create(user=request.user)
-
-    # Обновляем количество в сессии
-    request.session['cart_items'] = cart.get_total_items()
-    request.session['cart_total'] = str(cart.get_total_price())
-
     return render(request, "pages/cart.html", {"cart": cart})
 
 
@@ -391,10 +385,16 @@ def remove_from_cart(request, item_id):
 @login_required
 def clear_cart(request):
     """Очистка корзины"""
-    cart = Cart.objects.get(user=request.user)
-    cart.items.all().delete()
+    if request.method != 'POST':
+        return redirect('cart')
 
-    messages.success(request, 'Корзина очищена')
+    try:
+        cart = Cart.objects.get(user=request.user)
+        cart.items.all().delete()
+        messages.success(request, 'Корзина очищена')
+    except Cart.DoesNotExist:
+        messages.info(request, 'Корзина уже пуста')
+
     return redirect('cart')
 
 
@@ -587,6 +587,7 @@ def yookassa_webhook(request):
 
     return JsonResponse({'status': 'method not allowed'}, status=405)
 
+
 def register_view(request):
     """Регистрация"""
     if request.user.is_authenticated:
@@ -599,9 +600,11 @@ def register_view(request):
 
             # Отправляем письмо для подтверждения email
             if send_verification_email(user, request):
-                messages.success(request, 'Регистрация прошла успешно! На вашу почту отправлено письмо для подтверждения email.')
+                messages.success(request,
+                                 'Регистрация прошла успешно! На вашу почту отправлено письмо для подтверждения email.')
             else:
-                messages.warning(request, 'Регистрация прошла, но не удалось отправить письмо подтверждения. Свяжитесь с поддержкой.')
+                messages.warning(request,
+                                 'Регистрация прошла, но не удалось отправить письмо подтверждения. Свяжитесь с поддержкой.')
 
             return redirect("login")
         else:
@@ -641,7 +644,7 @@ def verify_email(request, token):
 
 
 def resend_verification(request):
-    """Повторная отправка письма подтверждения"""
+    """По��торная отправка письма подтверждения"""
     if request.method == 'POST':
         email = request.POST.get('email')
 
@@ -716,6 +719,7 @@ def reset_password(request, token):
         messages.error(request, 'Неверная ссылка для сброса пароля.')
         return redirect('forgot_password')
 
+
 def login_view(request):
     """Вход в систему"""
     if request.user.is_authenticated:
@@ -762,16 +766,45 @@ def profile_view(request):
 def profile_edit(request):
     """Редактирование профиля"""
     if request.method == "POST":
-        user = request.user
-        user.first_name = request.POST.get('first_name', '')
-        user.last_name = request.POST.get('last_name', '')
-        user.phone = request.POST.get('phone', '')
-        user.save()
+        form = UserProfileForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Профиль успешно обновлен')
+            return redirect('profile')
+        else:
+            messages.error(request, 'Пожалуйста, исправьте ошибки в форме')
+    else:
+        form = UserProfileForm(instance=request.user)
 
-        messages.success(request, 'Профиль обновлен')
-        return redirect('profile')
+    return render(request, "pages/profile_edit.html", {
+        "user": request.user,
+        "form": form,
+    })
 
-    return render(request, "pages/profile_edit.html", {"user": request.user})
+
+@login_required
+def change_password(request):
+    """Смена пароля"""
+    if request.method == "POST":
+        form = ChangePasswordForm(request.user, request.POST)
+        if form.is_valid():
+            form.save()
+            # Повторная аутентификация, чтобы сессия не сбросилась
+            from django.contrib.auth import update_session_auth_hash
+            update_session_auth_hash(request, request.user)
+            messages.success(request, 'Пароль успешно изменен')
+            return redirect('profile')
+        else:
+            # Собираем ошибки из формы для отображения
+            for error in form.non_field_errors():
+                messages.error(request, error)
+            for field, errors in form.errors.items():
+                if field != '__all__':
+                    for error in errors:
+                        messages.error(request, error)
+            return redirect('profile_edit')
+
+    return redirect('profile_edit')
 
 
 # --- МОДЕРАЦИЯ ОТЗЫВОВ ---

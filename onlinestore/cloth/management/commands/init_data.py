@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from cloth.models import (
+from ...models import (
     Role, OrderStatus, TransactionStatus, DeliveryMethod,
     Gender, Size, Color, Category
 )

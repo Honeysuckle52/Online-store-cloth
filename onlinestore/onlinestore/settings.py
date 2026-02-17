@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-21b3ya4t5bo21ak@&748nvu3(q*qm(@k(n4)m^mpafp+3e3s2d'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-CHANGE-ME-IN-PRODUCTION')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -138,16 +138,22 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
+# Static files
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-AUTH_USER_MODEL = 'cloth.User'
-
-TEMPLATES[0]['DIRS'] = [BASE_DIR / 'templates']
-
+# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Custom user model
+AUTH_USER_MODEL = 'cloth.User'
+
+# Templates dirs
+TEMPLATES[0]['DIRS'] = [BASE_DIR / 'templates']
+
+# Additional context processors
 TEMPLATES[0]['OPTIONS']['context_processors'] += [
     'cloth.context_processors.cart_items',
 ]
@@ -156,15 +162,6 @@ TEMPLATES[0]['OPTIONS']['context_processors'] += [
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
-
-# Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
-# Static files
-STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Messages
 from django.contrib.messages import constants as messages

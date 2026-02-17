@@ -7,7 +7,7 @@
 <div class="wishlist-page">
     <div class="container" style="padding: 40px 5%;">
         <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin-bottom: 30px;">Избранное</h1>
-        
+
         {% if wishlist_items %}
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;">
                 {% for item in wishlist_items %}
@@ -22,7 +22,7 @@
                                 </div>
                             {% endif %}
                         {% endwith %}
-                        
+
                         <div class="product-info" style="padding: 15px;">
                             <h3 style="margin: 0 0 8px 0; font-size: 1.1rem;">{{ item.product.name|truncatechars:40 }}</h3>
                             <p class="product-price" style="margin: 0; font-weight: 700; color: var(--accent-primary); font-size: 1.2rem;">
@@ -36,14 +36,14 @@
                             </p>
                         </div>
                     </a>
-                    
-                    <a href="{% url 'toggle_wishlist' item.product.id %}" 
+
+                    <a href="{% url 'toggle_wishlist' item.product.id %}"
                        class="wishlist-btn active"
                        style="position: absolute; top: 10px; right: 10px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #ff4d4d; box-shadow: var(--shadow-sm); transition: var(--transition);"
                        onclick="event.preventDefault(); removeFromWishlist(this, '{{ item.product.id }}');">
                         <i class="bi bi-heart-fill"></i>
                     </a>
-                    
+
                     <button onclick="addToCart({{ item.product.variants.first.id }})"
                             style="position: absolute; bottom: 10px; right: 10px; background: var(--accent-primary); color: white; border: none; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: var(--transition); box-shadow: var(--shadow-sm);"
                             onmouseover="this.style.background='var(--accent-secondary)'; this.style.transform='scale(1.1)'"
@@ -80,7 +80,7 @@ function removeFromWishlist(element, productId) {
             card.style.animation = 'fadeOut 0.3s ease';
             setTimeout(() => {
                 card.remove();
-                
+
                 // Обновляем счетчик в навигации
                 const wishlistBadge = document.querySelector('a[href="{% url 'wishlist' %}"] .badge');
                 if (wishlistBadge) {
@@ -89,13 +89,13 @@ function removeFromWishlist(element, productId) {
                         wishlistBadge.style.display = 'none';
                     }
                 }
-                
+
                 // Если товаров больше нет, показываем пустое состояние
                 if (document.querySelectorAll('.product-card').length === 0) {
                     location.reload();
                 }
             }, 300);
-            
+
             showNotification('Товар удален из избранного', 'info');
         }
     });
@@ -106,7 +106,7 @@ function addToCart(variantId) {
         showNotification('Товар временно недоступен', 'warning');
         return;
     }
-    
+
     fetch(`/cart/add/${variantId}/`, {
         method: 'POST',
         headers: {
@@ -142,9 +142,9 @@ function showNotification(message, type) {
         animation: slideIn 0.3s ease;
     `;
     notification.textContent = message;
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => notification.remove(), 300);

@@ -85,56 +85,5 @@
     </div>
 </div>
 
-<script>
-function toggleWishlist(element, productId) {
-    fetch(`/wishlist/toggle/${productId}/`, {
-        method: 'GET',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const icon = element.querySelector('i');
-            if (data.in_wishlist) {
-                icon.classList.remove('bi-heart');
-                icon.classList.add('bi-heart-fill');
-                element.style.color = '#ff4d4d';
-                showNotification('Товар добавлен в избранное', 'success');
-            } else {
-                icon.classList.remove('bi-heart-fill');
-                icon.classList.add('bi-heart');
-                element.style.color = 'var(--text-secondary)';
-                showNotification('Товар удален из избранного', 'info');
-            }
-        }
-    });
-}
 
-function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type}`;
-    notification.style.cssText = `
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        background: white;
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 1rem 2rem;
-        box-shadow: var(--shadow-md);
-        z-index: 9999;
-        animation: slideIn 0.3s ease;
-    `;
-    notification.textContent = message;
-
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
-</script>
 {% endblock %}

@@ -61,10 +61,47 @@
             
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color);">
                 <h3 style="font-size: 1.1rem; margin-bottom: 15px;">Сменить пароль</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 15px;">Для смены пароля перейдите в раздел безопасности</p>
-                <a href="#" class="btn-outline" style="display: inline-block; padding: 10px 20px; text-decoration: none;" onclick="alert('Функция смены пароля будет доступна позже'); return false;">
-                    <i class="bi bi-key" style="margin-right: 8px;"></i>Изменить пароль
-                </a>
+                <form method="post" action="{% url 'change_password' %}" style="display: flex; flex-direction: column; gap: 16px;">
+                    {% csrf_token %}
+                    <div>
+                        <label for="old_password" style="display: block; margin-bottom: 8px; font-weight: 500;">Текущий пароль</label>
+                        <input type="password"
+                               id="old_password"
+                               name="old_password"
+                               placeholder="Введите текущий пароль"
+                               required
+                               style="width: 100%; padding: 12px 15px; border: 2px solid var(--border-color); border-radius: 12px; font-size: 1rem; transition: var(--transition);"
+                               onfocus="this.style.borderColor='var(--accent-primary)'; this.style.outline='none';"
+                               onblur="this.style.borderColor='var(--border-color)';">
+                    </div>
+                    <div>
+                        <label for="new_password1" style="display: block; margin-bottom: 8px; font-weight: 500;">Новый пароль</label>
+                        <input type="password"
+                               id="new_password1"
+                               name="new_password1"
+                               placeholder="Минимум 8 символов"
+                               required
+                               minlength="8"
+                               style="width: 100%; padding: 12px 15px; border: 2px solid var(--border-color); border-radius: 12px; font-size: 1rem; transition: var(--transition);"
+                               onfocus="this.style.borderColor='var(--accent-primary)'; this.style.outline='none';"
+                               onblur="this.style.borderColor='var(--border-color)';">
+                    </div>
+                    <div>
+                        <label for="new_password2" style="display: block; margin-bottom: 8px; font-weight: 500;">Подтверждение пароля</label>
+                        <input type="password"
+                               id="new_password2"
+                               name="new_password2"
+                               placeholder="Повторите новый пароль"
+                               required
+                               minlength="8"
+                               style="width: 100%; padding: 12px 15px; border: 2px solid var(--border-color); border-radius: 12px; font-size: 1rem; transition: var(--transition);"
+                               onfocus="this.style.borderColor='var(--accent-primary)'; this.style.outline='none';"
+                               onblur="this.style.borderColor='var(--border-color)';">
+                    </div>
+                    <button type="submit" class="btn-outline" style="padding: 12px 20px; align-self: flex-start;">
+                        <i class="bi bi-key" style="margin-right: 8px;"></i>Изменить пароль
+                    </button>
+                </form>
             </div>
         </div>
     </div>

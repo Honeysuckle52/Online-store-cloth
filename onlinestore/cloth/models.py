@@ -255,6 +255,11 @@ class ProductVariant(models.Model):
         attrs_str = f" ({', '.join(attrs)})" if attrs else ""
         return f"{self.product.name}{attrs_str}"
 
+    @property
+    def in_stock(self):
+        """Проверка наличия на складе"""
+        return self.stock_quantity > 0
+
     def save(self, *args, **kwargs):
         if not self.sku:
             base = f"{self.product.id}"

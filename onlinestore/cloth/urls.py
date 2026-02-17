@@ -26,9 +26,6 @@ urlpatterns = [
 
     # Платежи
     path('payment/<int:order_id>/', views.payment_process, name='payment'),
-
-    # Платежи
-    path('payment/<int:order_id>/', views.payment_process, name='payment'),
     path('payment/result/<int:order_id>/', views.payment_result, name='payment_result'),
     path('payment/webhook/yookassa/', views.yookassa_webhook, name='yookassa_webhook'),
 
@@ -38,12 +35,12 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('profile/', views.profile_view, name='profile'),
     path('profile/edit/', views.profile_edit, name='profile_edit'),
+    path('profile/change-password/', views.change_password, name='change_password'),
 
     # Модерация отзывов
     path('moderate/reviews/', views.moderate_reviews, name='moderate_reviews'),
     path('moderate/review/<int:review_id>/approve/', views.approve_review, name='approve_review'),
     path('moderate/review/<int:review_id>/reject/', views.reject_review, name='reject_review'),
-    path('product/<int:product_id>/review/', views.add_review, name='add_review'),
 
     # Управление товарами
     path('manage/products/', views.manage_products, name='manage_products'),

@@ -209,79 +209,62 @@ class UserProfileForm(forms.ModelForm):
         }
 
 
-class ProductFilterForm(forms.Form):
-    """Форма фильтрации товаров"""
-    SORT_CHOICES = [
-        ('-created_at', 'Новинки'),
-        ('price', 'Сначала дешевле'),
-        ('-price', 'Сначала дороже'),
-        ('name', 'По названию (А-Я)'),
-        ('-name', 'По названию (Я-А)'),
-    ]
+class ChangePasswordForm(forms.Form):
+    """Форма смены пароля"""
+    old_password = forms.CharField(
+        label='Текущий пароль',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите текущий пароль',
+            'autocomplete': 'current-password'
+        })
+    )
+    new_password1 = forms.CharField(
+        label='Новый пароль',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите новый пароль',
+            'autocomplete': 'new-password'
+        })
+    )
+    new_password2 = forms.CharField(
+        label='Подтверждение нового пароля',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Повторите новый пароль',
+            'autocomplete': 'new-password'
+        })
+    )
 
-    min_price = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'От',
-            'min': 0,
-            'step': 100
-        })
-    )
-    max_price = forms.DecimalField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'До',
-            'min': 0,
-            'step': 100
-        })
-    )
-    sort = forms.ChoiceField(
-        choices=SORT_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-    in_stock = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
-    )
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_old_password(self):
+        old_password = self.cleaned_data.get('old_password')
+        if not self.user.check_password(old_password):
+            raise ValidationError('Неверный текущий пароль')
+        return old_password
 
     def clean(self):
         cleaned_data = super().clean()
-        min_price = cleaned_data.get('min_price')
-        max_price = cleaned_data.get('max_price')
+        new_password1 = cleaned_data.get('new_password1')
+        new_password2 = cleaned_data.get('new_password2')
 
-        if min_price and max_price and min_price > max_price:
-            raise ValidationError('Минимальная цена не может быть больше максимальной')
-
-        return cleaned_data
-
-
-class AddToCartForm(forms.Form):
-    """Форма добавления в корзину"""
-    quantity = forms.IntegerField(
-        min_value=1,
-        initial=1,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'min': 1,
-            'value': 1
-        })
-    )
-    variant_id = forms.IntegerField(widget=forms.HiddenInput())
-
-    def clean(self):
-        cleaned_data = super().clean()
-        variant_id = cleaned_data.get('variant_id')
-        quantity = cleaned_data.get('quantity')
-
-        if variant_id:
-            try:
-                variant = ProductVariant.objects.get(id=variant_id)
-                if quantity > variant.stock_quantity:
-                    raise ValidationError(f'Доступно только {variant.stock_quantity} шт.')
-            except ProductVariant.DoesNotExist:
-                raise ValidationError('Товар не найден')
+        if new_password1 and new_password2:
+            if new_password1 != new_password2:
+                raise ValidationError('Новые пароли не совпадают')
+            if len(new_password1) < 8:
+                raise ValidationError('Пароль должен содержать минимум 8 символов')
+            if new_password1 == self.cleaned_data.get('old_password'):
+                raise ValidationError('Новый пароль должен отличаться от текущего')
 
         return cleaned_data
+
+    def save(self):
+        self.user.set_password(self.cleaned_data['new_password1'])
+        self.user.save()
+        return self.user
+
+
+

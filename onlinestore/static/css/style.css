@@ -143,6 +143,48 @@ a:hover {
     justify-content: center;
 }
 
+/* Поиск в навигации */
+.navbar-search {
+    display: flex;
+    align-items: center;
+    flex: 0 1 300px;
+}
+
+.navbar-search input {
+    padding: 8px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 50px 0 0 50px;
+    width: 100%;
+    font-size: 0.9rem;
+    outline: none;
+    transition: var(--transition);
+    background: var(--bg-secondary);
+}
+
+.navbar-search input:focus {
+    border-color: var(--accent-primary);
+}
+
+.navbar-search button {
+    padding: 8px 15px;
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 0 50px 50px 0;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.navbar-search button:hover {
+    background: var(--accent-secondary);
+}
+
+@media (max-width: 768px) {
+    .navbar-search {
+        display: none;
+    }
+}
+
 /* Выпадающее меню */
 .dropdown {
     position: relative;

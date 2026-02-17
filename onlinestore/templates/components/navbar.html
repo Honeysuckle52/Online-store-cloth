@@ -3,6 +3,13 @@
     <div class="container">
         <a href="{% url 'home' %}" class="brand">CLOTH.</a>
 
+        <form action="{% url 'catalog' %}" method="get" class="navbar-search">
+            <input type="text" name="q" placeholder="Поиск..." value="{{ request.GET.q }}">
+            <button type="submit">
+                <i class="bi bi-search"></i>
+            </button>
+        </form>
+
         <div class="nav-links">
             <a href="{% url 'catalog' %}">Каталог</a>
 
@@ -42,18 +49,19 @@
                         {% if user.role.name == 'moderator' or user.role.name == 'admin' or user.is_staff %}
                         <div style="height: 1px; background: var(--border-color); margin: 0.5rem 0;"></div>
                         <a class="dropdown-item" href="{% url 'moderate_reviews' %}" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: var(--text-primary);">
-                            </i>Модерация отзывов
+                            <i class="bi bi-chat-square-text" style="margin-right: 8px;"></i>Модерация отзывов
                         </a>
                         <a class="dropdown-item" href="{% url 'manage_products' %}" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: var(--text-primary);">
-                            </i>Управление товарами
+                            <i class="bi bi-box-seam" style="margin-right: 8px;"></i>Управление товарами
                         </a>
                         {% endif %}
 
                         {% if user.is_superuser or user.role.name == 'admin' %}
-                        <a class="dropdown-item" href="{% url 'admin_dashboard' %}">Панель управления</a>
+                        <a class="dropdown-item" href="{% url 'admin_dashboard' %}" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: var(--text-primary);">
+                            <i class="bi bi-speedometer2" style="margin-right: 8px;"></i>Панель управления
                         </a>
                         <a class="dropdown-item" href="/admin/" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: var(--text-primary);">
-                            </i>Django Admin
+                            <i class="bi bi-gear" style="margin-right: 8px;"></i>Django Admin
                         </a>
                         {% endif %}
 
@@ -78,7 +86,6 @@ function toggleDropdown(event) {
     dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
 }
 
-// Закрыть дропдаун при клике вне его
 document.addEventListener('click', function(event) {
     const dropdown = document.getElementById('userDropdown');
     const trigger = event.target.closest('.dropdown');
@@ -87,10 +94,3 @@ document.addEventListener('click', function(event) {
     }
 });
 </script>
-
-<form action="{% url 'catalog' %}" method="get" style="display: flex; align-items: center;">
-    <input type="text" name="q" placeholder="Поиск..." value="{{ request.GET.q }}" style="padding: 8px 15px; border: 1px solid var(--border-color); border-radius: 50px 0 0 50px; width: 200px;">
-    <button type="submit" style="padding: 8px 15px; background: var(--accent-primary); color: white; border: none; border-radius: 0 50px 50px 0; cursor: pointer;">
-        <i class="bi bi-search"></i>
-    </button>
-</form>
