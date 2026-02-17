@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Личный кабинет{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <div class="container" style="padding: 40px 5%;">
+        <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin-bottom: 30px;">Личный кабинет</h1>
+
+        <div style="display: grid; grid-template-columns: 300px 1fr; gap: 30px;">
+            <!-- Боковая панель -->
+            <aside>
+                <div style="background: white; border-radius: 20px; padding: 30px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <div style="width: 100px; height: 100px; background: var(--accent-primary); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; color: white; font-size: 2.5rem; font-weight: 600;">
+                            {{ user.first_name|first|default:user.email|first|upper }}
+                        </div>
+                        <h3 style="margin: 0;">{{ user.get_full_name|default:user.email }}</h3>
+                        <p style="color: var(--text-secondary); margin: 5px 0 0;">{{ user.email }}</p>
+                        {% if user.phone %}
+                        <p style="color: var(--text-secondary); margin: 5px 0 0;">{{ user.phone }}</p>
+                        {% endif %}
+                    </div>
+
+                    <nav style="display: flex; flex-direction: column; gap: 5px;">
+                        <a href="{% url 'profile' %}" style="display: flex; align-items: center; gap: 10px; padding: 12px 15px; background: var(--border-color); border-radius: 10px; color: var(--text-primary); text-decoration: none; font-weight: 500;">
+                            <i class="bi bi-person"></i>
+                            <span>Профиль</span>
+                        </a>
+                        <a href="{% url 'order_history' %}" style="display: flex; align-items: center; gap: 10px; padding: 12px 15px; border-radius: 10px; color: var(--text-primary); text-decoration: none; transition: var(--transition);" onmouseover="this.style.background='var(--border-color)'" onmouseout="this.style.background='transparent'">
+                            <i class="bi bi-box"></i>
+                            <span>Мои заказы</span>
+                        </a>
+                        <a href="{% url 'wishlist' %}" style="display: flex; align-items: center; gap: 10px; padding: 12px 15px; border-radius: 10px; color: var(--text-primary); text-decoration: none; transition: var(--transition);" onmouseover="this.style.background='var(--border-color)'" onmouseout="this.style.background='transparent'">
+                            <i class="bi bi-heart"></i>
+                            <span>Избранное</span>
+                            {% if user.wishlist.count %}
+                            <span style="margin-left: auto; background: var(--accent-primary); color: white; padding: 2px 8px; border-radius: 50px; font-size: 0.8rem;">{{ user.wishlist.count }}</span>
+                            {% endif %}
+                        </a>
+                        <a href="{% url 'profile_edit' %}" style="display: flex; align-items: center; gap: 10px; padding: 12px 15px; border-radius: 10px; color: var(--text-primary); text-decoration: none; transition: var(--transition);" onmouseover="this.style.background='var(--border-color)'" onmouseout="this.style.background='transparent'">
+                            <i class="bi bi-gear"></i>
+                            <span>Настройки</span>
+                        </a>
+                        <a href="{% url 'logout' %}" style="display: flex; align-items: center; gap: 10px; padding: 12px 15px; border-radius: 10px; color: #dc3545; text-decoration: none; transition: var(--transition); margin-top: 10px;" onmouseover="this.style.background='#fee'">
+                            <i class="bi bi-box-arrow-right"></i>
+                            <span>Выйти</span>
+                        </a>
+                    </nav>
+                </div>
+            </aside>
+
+            <!-- Основной контент -->
+            <section>
+                <div style="background: white; border-radius: 20px; padding: 30px; border: 1px solid var(--border-color);">
+                    <h2 style="margin: 0 0 20px 0;">Личные данные</h2>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+                        <div>
+                            <p style="color: var(--text-secondary); margin-bottom: 5px;">Имя</p>
+                            <p style="font-weight: 500;">{{ user.first_name|default:"Не указано" }}</p>
+                        </div>
+                        <div>
+                            <p style="color: var(--text-secondary); margin-bottom: 5px;">Фамилия</p>
+                            <p style="font-weight: 500;">{{ user.last_name|default:"Не указано" }}</p>
+                        </div>
+                        <div>
+                            <p style="color: var(--text-secondary); margin-bottom: 5px;">Email</p>
+                            <p style="font-weight: 500;">{{ user.email }}</p>
+                        </div>
+                        <div>
+                            <p style="color: var(--text-secondary); margin-bottom: 5px;">Телефон</p>
+                            <p style="font-weight: 500;">{{ user.phone|default:"Не указан" }}</p>
+                        </div>
+                    </div>
+
+                    <a href="{% url 'profile_edit' %}" class="btn-outline" style="display: inline-block; padding: 12px 30px;">
+                        <i class="bi bi-pencil" style="margin-right: 8px;"></i>Редактировать
+                    </a>
+                </div>
+
+                <!-- Последние заказы -->
+                <div style="background: white; border-radius: 20px; padding: 30px; border: 1px solid var(--border-color); margin-top: 30px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0;">Последние заказы</h3>
+                        <a href="{% url 'order_history' %}" style="color: var(--accent-primary); text-decoration: none;">
+                            Все заказы <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+
+                    {% if orders %}
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            {% for order in orders %}
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid var(--border-color); border-radius: 12px; transition: var(--transition);" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                                <div>
+                                    <span style="font-weight: 600;">Заказ #{{ order.order_number }}</span>
+                                    <p style="margin: 5px 0 0; color: var(--text-secondary); font-size: 0.9rem;">{{ order.created_at|date:"d.m.Y" }}</p>
+                                </div>
+                                <span style="padding: 4px 12px; border-radius: 50px; font-size: 0.9rem; background:
+                                    {% if order.status.name == 'created' %}#E9DBCB
+                                    {% elif order.status.name == 'paid' %}#D4A373
+                                    {% elif order.status.name == 'shipped' %}#8C7E72
+                                    {% elif order.status.name == 'delivered' %}#4A3F35
+                                    {% elif order.status.name == 'cancelled' %}#dc3545
+                                    {% endif %};
+                                    color: {% if order.status.name == 'delivered' %}white{% else %}var(--text-primary){% endif %};">
+                                    {{ order.status.get_name_display }}
+                                </span>
+                                <span style="font-weight: 700;">{{ order.total_amount }} ₽</span>
+                                <a href="{% url 'order_detail' order.id %}" style="color: var(--accent-primary);">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p style="color: var(--text-secondary); text-align: center; padding: 30px;">У вас пока нет заказов</p>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}

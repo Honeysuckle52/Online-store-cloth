@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Заказ #{{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="order-detail-page">
+    <div class="container" style="padding: 40px 5%; max-width: 900px;">
+        <div style="margin-bottom: 20px;">
+            <a href="{% url 'order_history' %}" style="color: var(--text-secondary); text-decoration: none;">
+                <i class="bi bi-arrow-left"></i> Вернуться к истории заказов
+            </a>
+        </div>
+
+        <div style="background: white; border-radius: 24px; padding: 40px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h1 style="font-family: 'Playfair Display'; font-size: 2rem; margin: 0;">Заказ #{{ order.order_number }}</h1>
+                <span style="padding: 8px 20px; border-radius: 50px; font-size: 1rem; background:
+                    {% if order.status.name == 'created' %}#E9DBCB
+                    {% elif order.status.name == 'paid' %}#D4A373
+                    {% elif order.status.name == 'shipped' %}#8C7E72
+                    {% elif order.status.name == 'delivered' %}#4A3F35
+                    {% elif order.status.name == 'cancelled' %}#dc3545
+                    {% endif %};
+                    color: {% if order.status.name == 'delivered' %}white{% else %}var(--text-primary){% endif %};">
+                    {{ order.status.get_name_display }}
+                </span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+                <div>
+                    <p style="color: var(--text-secondary); margin-bottom: 5px;">Дата заказа</p>
+                    <p style="font-weight: 500;">{{ order.created_at|date:"d.m.Y H:i" }}</p>
+                </div>
+                <div>
+                    <p style="color: var(--text-secondary); margin-bottom: 5px;">Способ оплаты</p>
+                    <p style="font-weight: 500;">ЮKassa</p>
+                </div>
+                <div>
+                    <p style="color: var(--text-secondary); margin-bottom: 5px;">Адрес доставки</p>
+                    <p style="font-weight: 500;">{{ order.delivery_address }}</p>
+                </div>
+                <div>
+                    <p style="color: var(--text-secondary); margin-bottom: 5px;">Статус</p>
+                    <p style="font-weight: 500;">{{ order.status.get_name_display }}</p>
+                </div>
+            </div>
+
+            {% if order.comment %}
+            <div style="margin-bottom: 30px; padding: 20px; background: var(--border-color); border-radius: 12px;">
+                <p style="color: var(--text-secondary); margin-bottom: 5px;">Комментарий к заказу:</p>
+                <p style="margin: 0;">{{ order.comment }}</p>
+            </div>
+            {% endif %}
+
+            <h3 style="margin-bottom: 20px;">Состав заказа</h3>
+
+            <div style="margin-bottom: 30px;">
+                {% for item in order.items.all %}
+                <div style="display: flex; align-items: center; gap: 20px; padding: 15px 0; border-bottom: 1px solid var(--border-color);">
+                    {% with main_image=item.variant.product.get_main_image %}
+                        {% if main_image %}
+                            <img src="{{ main_image.image.url }}" alt="" style="width: 80px; height: 80px; object-fit: cover; border-radius: 12px;">
+                        {% endif %}
+                    {% endwith %}
+
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 5px;">{{ item.variant.product.name }}</h4>
+                        <p style="margin: 0; color: var(--text-secondary);">
+                            Артикул: {{ item.variant.sku }}<br>
+                            {% if item.variant.size %}Размер: {{ item.variant.size.name }}{% endif %}
+                            {% if item.variant.color %}, Цвет: {{ item.variant.color.name }}{% endif %}
+                        </p>
+                    </div>
+
+                    <div style="text-align: right;">
+                        <p style="margin: 0; font-weight: 500;">{{ item.quantity }} x {{ item.price_per_unit }} ₽</p>
+                        <p style="margin: 5px 0 0; font-weight: 700; color: var(--accent-primary);">{{ item.total_price }} ₽</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div style="padding-top: 20px; border-top: 2px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>Товары ({{ order.items.count }} шт.)</span>
+                    <span>{{ order.total_amount }} ₽</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>Доставка</span>
+                    <span>Бесплатно</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.3rem; margin-top: 15px;">
+                    <span>Итого:</span>
+                    <span style="color: var(--accent-primary);">{{ order.total_amount }} ₽</span>
+                </div>
+            </div>
+
+            {% if order.transactions.exists %}
+            <div style="margin-top: 30px;">
+                <h3 style="margin-bottom: 15px;">Информация об оплате</h3>
+                {% for transaction in order.transactions.all %}
+                <div style="background: #f8f8f8; border-radius: 12px; padding: 15px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Транзакция #{{ transaction.id }}</span>
+                        <span style="color: {% if transaction.status.name == 'succeeded' %}#28a745{% elif transaction.status.name == 'failed' %}#dc3545{% else %}var(--text-secondary){% endif %};">
+                            {{ transaction.status.get_name_display }}
+                        </span>
+                    </div>
+                    <p style="margin: 5px 0 0; color: var(--text-secondary); font-size: 0.9rem;">{{ transaction.created_at|date:"d.m.Y H:i" }}</p>
+                    <p style="margin: 5px 0 0;">Сумма: {{ transaction.amount }} ₽</p>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if order.status.name == 'created' %}
+            <div style="margin-top: 30px; text-align: center;">
+                <a href="{% url 'payment' order.id %}" class="btn-main" style="padding: 15px 50px; font-size: 1.1rem;">
+                    <i class="bi bi-wallet2" style="margin-right: 10px;"></i>Перейти к оплате
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% if order.status.name == 'created' and not order.transactions.exists %}
+<div style="margin-top: 30px; text-align: center;">
+    <a href="{% url 'payment' order.id %}" class="btn-main" style="padding: 15px 50px; font-size: 1.1rem;">
+        <i class="bi bi-wallet2" style="margin-right: 8px;"></i>Оплатить заказ
+    </a>
+    <p style="margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem;">
+        Оплата через ЮKassa. Мы принимаем карты Visa, MasterCard, МИР
+    </p>
+</div>
+{% endif %}

@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Каталог товаров{% endblock %}
+
+{% block content %}
+<div class="catalog-page">
+    <div class="container" style="padding: 40px 5%;">
+        <!-- Заголовок и поиск -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+            <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin: 0;">Каталог</h1>
+
+            <form method="get" style="display: flex; gap: 10px;">
+                <input type="text"
+                       name="q"
+                       placeholder="Поиск товаров..."
+                       value="{{ request.GET.q }}"
+                       style="padding: 12px 20px; border: 2px solid var(--border-color); border-radius: 50px; width: 300px; font-size: 1rem; transition: var(--transition);"
+                       onfocus="this.style.borderColor='var(--accent-primary)'; this.style.outline='none';"
+                       onblur="this.style.borderColor='var(--border-color)';">
+                <button type="submit" class="btn-main" style="padding: 12px 30px;">
+                    <i class="bi bi-search"></i>
+                </button>
+            </form>
+        </div>
+
+        <div style="display: flex; gap: 40px;">
+            <!-- Фильтры -->
+            <aside style="width: 280px; flex-shrink: 0;">
+                <div style="background: white; border-radius: 20px; padding: 25px; border: 1px solid var(--border-color); position: sticky; top: 100px;">
+                    <h3 style="margin: 0 0 20px 0; font-size: 1.3rem;">Фильтры</h3>
+
+                    <form method="get" id="filter-form">
+                        {% if request.GET.q %}
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                        {% endif %}
+
+                        <!-- Категории -->
+                        <div style="margin-bottom: 25px;">
+                            <h4 style="margin: 0 0 15px 0; font-size: 1.1rem;">Категории</h4>
+                            <ul style="list-style: none; padding: 0;">
+                                <li style="margin-bottom: 10px;">
+                                    <a href="?{% if request.GET.q %}q={{ request.GET.q }}{% endif %}"
+                                       style="text-decoration: none; color: {% if not request.GET.category %}var(--accent-primary){% else %}var(--text-secondary){% endif %}; transition: var(--transition); display: block; padding: 5px 0;">
+                                        Все товары
+                                    </a>
+                                </li>
+                                {% for cat in categories %}
+                                <li style="margin-bottom: 10px;">
+                                    <a href="?category={{ cat.slug }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+                                       style="text-decoration: none; color: {% if request.GET.category == cat.slug %}var(--accent-primary){% else %}var(--text-secondary){% endif %}; transition: var(--transition); display: block; padding: 5px 0;">
+                                        {{ cat.name }}
+                                    </a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
+                        <!-- Цена -->
+                        <div style="margin-bottom: 25px;">
+                            <h4 style="margin: 0 0 15px 0; font-size: 1.1rem;">Цена</h4>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="number"
+                                       name="min_price"
+                                       placeholder="От"
+                                       value="{{ request.GET.min_price }}"
+                                       min="0"
+                                       style="width: 50%; padding: 10px; border: 2px solid var(--border-color); border-radius: 10px;">
+                                <input type="number"
+                                       name="max_price"
+                                       placeholder="До"
+                                       value="{{ request.GET.max_price }}"
+                                       min="0"
+                                       style="width: 50%; padding: 10px; border: 2px solid var(--border-color); border-radius: 10px;">
+                            </div>
+                        </div>
+
+                        <!-- Размеры -->
+                        <div style="margin-bottom: 25px;">
+                            <h4 style="margin: 0 0 15px 0; font-size: 1.1rem;">Размеры</h4>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                {% for size in sizes %}
+                                <label style="display: inline-flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="checkbox"
+                                           name="size"
+                                           value="{{ size.name }}"
+                                           {% if size.name in selected_sizes %}checked{% endif %}
+                                           style="cursor: pointer;">
+                                    <span>{{ size.name }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Цвета -->
+                        <div style="margin-bottom: 25px;">
+                            <h4 style="margin: 0 0 15px 0; font-size: 1.1rem;">Цвета</h4>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                {% for color in colors %}
+                                <label style="display: inline-flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="checkbox"
+                                           name="color"
+                                           value="{{ color.name }}"
+                                           {% if color.name in selected_colors %}checked{% endif %}
+                                           style="cursor: pointer;">
+                                    <span style="display: flex; align-items: center; gap: 5px;">
+                                        <span style="width: 15px; height: 15px; border-radius: 50%; background: {{ color.hex_code }}; border: 1px solid var(--border-color);"></span>
+                                        {{ color.name }}
+                                    </span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-main" style="width: 100%; padding: 12px;">
+                            Применить фильтры
+                        </button>
+                    </form>
+
+                    {% if request.GET %}
+                    <a href="{% url 'catalog' %}" style="display: block; text-align: center; margin-top: 15px; color: var(--text-secondary); text-decoration: none;">
+                        Сбросить фильтры
+                    </a>
+                    {% endif %}
+                </div>
+            </aside>
+
+            <!-- Товары -->
+            <div style="flex: 1;">
+                <!-- Сортировка -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: white; padding: 15px 20px; border-radius: 15px; border: 1px solid var(--border-color);">
+                    <p style="margin: 0; color: var(--text-secondary);">
+                        Найдено товаров: <strong>{{ page_obj.paginator.count }}</strong>
+                    </p>
+
+                    <form method="get" id="sort-form" style="display: flex; align-items: center; gap: 10px;">
+                        {% for key, value in request.GET.items %}
+                            {% if key != 'sort' and key != 'page' %}
+                                <input type="hidden" name="{{ key }}" value="{{ value }}">
+                            {% endif %}
+                        {% endfor %}
+
+                        <select name="sort" onchange="this.form.submit()" style="padding: 8px 15px; border: 2px solid var(--border-color); border-radius: 10px; cursor: pointer;">
+                            <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>Новинки</option>
+                            <option value="price" {% if request.GET.sort == 'price' %}selected{% endif %}>Сначала дешевле</option>
+                            <option value="-price" {% if request.GET.sort == '-price' %}selected{% endif %}>Сначала дороже</option>
+                            <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>По названию (А-Я)</option>
+                            <option value="-name" {% if request.GET.sort == '-name' %}selected{% endif %}>По названию (Я-А)</option>
+                        </select>
+                    </form>
+                </div>
+
+                <!-- Сетка товаров -->
+                {% if products %}
+                <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px;">
+                    {% for product in products %}
+                        {% include "components/product_card.html" with product=product %}
+                    {% endfor %}
+                </div>
+
+                <!-- Пагинация -->
+                {% if page_obj.paginator.num_pages > 1 %}
+                <div style="display: flex; justify-content: center; gap: 10px; margin-top: 40px;">
+                    {% if page_obj.has_previous %}
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+                       class="btn-outline" style="padding: 10px 20px;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if num == page_obj.number %}
+                        <span class="btn-main" style="padding: 10px 20px;">{{ num }}</span>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}"
+                           class="btn-outline" style="padding: 10px 20px;">{{ num }}</a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+                       class="btn-outline" style="padding: 10px 20px;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% else %}
+                <div style="text-align: center; padding: 60px; background: white; border-radius: 30px; border: 1px solid var(--border-color);">
+                    <i class="bi bi-search" style="font-size: 4rem; color: var(--text-secondary);"></i>
+                    <h3 style="margin: 20px 0 10px;">Товары не найдены</h3>
+                    <p style="color: var(--text-secondary);">Попробуйте изменить параметры фильтрации</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

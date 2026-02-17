@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Оформление заказа{% endblock %}
+
+{% block content %}
+<div class="checkout-page">
+    <div class="container" style="padding: 40px 5%; max-width: 1000px;">
+        <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; text-align: center; margin-bottom: 40px;">Оформление заказа</h1>
+
+        {% if cart and cart.items.all %}
+        <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px;">
+            <!-- Форма оформления -->
+            <div>
+                <form method="post" style="background: white; padding: 30px; border-radius: 20px; border: 1px solid var(--border-color);">
+                    {% csrf_token %}
+
+                    <h3 style="margin-bottom: 20px;">Контактные данные</h3>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Email</label>
+                        <input type="email" value="{{ user.email }}" readonly style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; background: #f8f8f8;">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Телефон</label>
+                        <input type="tel" name="phone" value="{{ user.phone }}" placeholder="+7 (999) 123-45-67" style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 10px;">
+                    </div>
+
+                    <h3 style="margin: 30px 0 20px;">Адрес доставки</h3>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Адрес</label>
+                        {{ form.delivery_address }}
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Комментарий к заказу</label>
+                        <textarea name="comment" rows="3" style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 10px;"></textarea>
+                    </div>
+
+                    <h3 style="margin: 30px 0 20px;">Способ оплаты</h3>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: flex; align-items: center; gap: 10px; padding: 15px; border: 2px solid var(--border-color); border-radius: 10px; cursor: pointer; margin-bottom: 10px;">
+                            <input type="radio" name="payment_method" value="yookassa" checked>
+                            <img src="https://yookassa.ru/assets/images/logo.svg" alt="ЮKassa" style="height: 30px;">
+                            <span style="flex: 1;">Банковской картой онлайн</span>
+                        </label>
+
+                        <label style="display: flex; align-items: center; gap: 10px; padding: 15px; border: 2px solid var(--border-color); border-radius: 10px; cursor: pointer;">
+                            <input type="radio" name="payment_method" value="cash">
+                            <i class="bi bi-cash" style="font-size: 1.5rem;"></i>
+                            <span style="flex: 1;">Наличными при получении</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-main" style="width: 100%; padding: 15px; font-size: 1.1rem;">
+                        <i class="bi bi-wallet2" style="margin-right: 8px;"></i>Оформить заказ
+                    </button>
+                </form>
+            </div>
+
+            <!-- Сводка заказа -->
+            <div>
+                <div style="background: #F2EDE4; border-radius: 20px; padding: 30px; position: sticky; top: 100px;">
+                    <h3 style="margin-bottom: 20px;">Ваш заказ</h3>
+
+                    {% for item in cart.items.all %}
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color);">
+                        {% with main_image=item.variant.product.get_main_image %}
+                            {% if main_image %}
+                                <img src="{{ main_image.image.url }}" alt="" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+                            {% endif %}
+                        {% endwith %}
+                        <div style="flex: 1;">
+                            <p style="margin: 0; font-weight: 500;">{{ item.variant.product.name }}</p>
+                            <p style="margin: 5px 0 0; color: var(--text-secondary); font-size: 0.9rem;">{{ item.quantity }} x {{ item.variant.price }} ₽</p>
+                        </div>
+                        <span style="font-weight: 600;">{{ item.get_total_price }} ₽</span>
+                    </div>
+                    {% endfor %}
+
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Товары:</span>
+                        <span>{{ cart.get_total_price }} ₽</span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Доставка:</span>
+                        <span>Бесплатно</span>
+                    </div>
+
+                    <hr style="border: none; border-top: 2px solid var(--border-color); margin: 20px 0;">
+
+                    <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.2rem;">
+                        <span>Итого:</span>
+                        <span style="color: var(--accent-primary);">{{ cart.get_total_price }} ₽</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 60px; background: white; border-radius: 20px;">
+            <i class="bi bi-cart-x" style="font-size: 3rem; color: var(--text-secondary);"></i>
+            <h3 style="margin: 20px 0;">Корзина пуста</h3>
+            <a href="{% url 'catalog' %}" class="btn-main">Перейти в каталог</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Управление заказами{% endblock %}
+
+{% block content %}
+<div class="manage-orders-page">
+    <div class="container" style="padding: 40px 5%;">
+        <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin-bottom: 30px;">Управление заказами</h1>
+        
+        <!-- Фильтр по статусу -->
+        <div style="margin-bottom: 30px;">
+            <form method="get" style="display: flex; gap: 15px; align-items: center;">
+                <select name="status" style="padding: 10px 15px; border: 2px solid var(--border-color); border-radius: 10px; min-width: 200px;">
+                    <option value="">Все статусы</option>
+                    {% for status in statuses %}
+                    <option value="{{ status.name }}" {% if current_status == status.name %}selected{% endif %}>{{ status.get_name_display }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn-outline">Применить</button>
+                <a href="{% url 'manage_orders' %}" class="btn-outline">Сбросить</a>
+            </form>
+        </div>
+        
+        <!-- Список заказов -->
+        <div style="background: white; border-radius: 20px; border: 1px solid var(--border-color); overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead style="background: var(--border-color);">
+                    <tr>
+                        <th style="padding: 15px; text-align: left;">№ заказа</th>
+                        <th style="padding: 15px; text-align: left;">Пользователь</th>
+                        <th style="padding: 15px; text-align: left;">Дата</th>
+                        <th style="padding: 15px; text-align: left;">Сумма</th>
+                        <th style="padding: 15px; text-align: left;">Статус</th>
+                        <th style="padding: 15px; text-align: left;">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 15px; font-weight: 600;">#{{ order.order_number }}</td>
+                        <td style="padding: 15px;">{{ order.user.get_full_name|default:order.user.email }}</td>
+                        <td style="padding: 15px;">{{ order.created_at|date:"d.m.Y H:i" }}</td>
+                        <td style="padding: 15px; font-weight: 600; color: var(--accent-primary);">{{ order.total_amount }} ₽</td>
+                        <td style="padding: 15px;">
+                            <span style="display: inline-block; padding: 5px 12px; border-radius: 50px; font-size: 0.9rem; background: 
+                                {% if order.status.name == 'created' %}#E9DBCB
+                                {% elif order.status.name == 'paid' %}#D4A373
+                                {% elif order.status.name == 'shipped' %}#8C7E72
+                                {% elif order.status.name == 'delivered' %}#4A3F35
+                                {% elif order.status.name == 'cancelled' %}#dc3545
+                                {% endif %};
+                                color: {% if order.status.name == 'delivered' %}white{% else %}var(--text-primary){% endif %};">
+                                {{ order.status.get_name_display }}
+                            </span>
+                        </td>
+                        <td style="padding: 15px;">
+                            <form method="post" action="{% url 'update_order_status' order.id %}" style="display: flex; gap: 10px;">
+                                {% csrf_token %}
+                                <select name="status" style="padding: 5px 10px; border: 1px solid var(--border-color); border-radius: 5px;">
+                                    {% for status in statuses %}
+                                    <option value="{{ status.name }}" {% if order.status.name == status.name %}selected{% endif %}>{{ status.get_name_display }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn-main" style="padding: 5px 15px; font-size: 0.9rem;">Обновить</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                            Заказы не найдены
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

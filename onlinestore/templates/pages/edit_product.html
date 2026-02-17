@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if product %}Редактирование{% else %}Добавление{% endif %} товара{% endblock %}
+
+{% block content %}
+<div class="edit-product-page">
+    <div class="container" style="padding: 40px 5%; max-width: 800px;">
+        <div style="background: white; border-radius: 24px; padding: 40px; border: 1px solid var(--border-color);">
+            <h1 style="font-family: 'Playfair Display'; font-size: 2rem; margin-bottom: 30px;">
+                {% if product %}Редактирование товара{% else %}Добавление нового товара{% endif %}
+            </h1>
+            
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <!-- Основная информация -->
+                <div style="margin-bottom: 25px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Название товара *</label>
+                    <input type="text" name="name" value="{{ product.name|default:'' }}" required style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 10px;">
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Описание *</label>
+                    <textarea name="description" rows="5" required style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 10px;">{{ product.description|default:'' }}</textarea>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Категория *</label>
+                        <select name="category" required style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 10px;">
+                            <option value="">Выберите категорию</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if product and product.category.id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Пол</label>
+                        <select name="gender" style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 10px;">
+                            <option value="">Не выбрано</option>
+                            {% for gender in genders %}
+                            <option value="{{ gender.id }}" {% if product and product.gender.id == gender.id %}selected{% endif %}>{{ gender.get_name_display }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Цена *</label>
+                        <input type="number" name="price" value="{{ product.price|default:'' }}" step="0.01" min="0" required style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 10px;">
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Материал</label>
+                        <input type="text" name="material" value="{{ product.material|default:'' }}" style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 10px;">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Уход за изделием</label>
+                    <textarea name="care_instructions" rows="3" style="width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 10px;">{{ product.care_instructions|default:'' }}</textarea>
+                </div>
+                
+                <!-- Варианты товара -->
+                <h3 style="margin: 30px 0 20px;">Варианты товара</h3>
+                
+                <div id="variants-container">
+                    {% if product %}
+                        {% for variant in product.variants.all %}
+                        <div class="variant-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; padding: 15px; background: #f8f8f8; border-radius: 10px;">
+                            <select name="size[]" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px;">
+                                <option value="">Размер</option>
+                                {% for size in sizes %}
+                                <option value="{{ size.id }}" {% if variant.size and variant.size.id == size.id %}selected{% endif %}>{{ size.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <select name="color[]" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px;">
+                                <option value="">Цвет</option>
+                                {% for color in colors %}
+                                <option value="{{ color.id }}" {% if variant.color and variant.color.id == color.id %}selected{% endif %}>{{ color.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="number" name="price[]" value="{{ variant.price }}" placeholder="Цена" step="0.01" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px;">
+                            <input type="number" name="stock[]" value="{{ variant.stock_quantity }}" placeholder="Кол-во" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px;">
+                            <button type="button" onclick="this.closest('.variant-row').remove()" style="background: none; border: none; color: #dc3545; cursor: pointer;">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="variant-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; padding: 15px; background: #f8f8f8; border-radius: 10px;">
+                        <select name="size[]" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px;">
+                            <option value="">Размер</option>
+                            {% for size in sizes %}
+                            <option value="{{ size.id }}">{{ size.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="color[]" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px;">
+                            <option value="">Цвет</option>
+                            {% for color in colors %}
+                            <option value="{{ color.id }}">{{ color.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="number" name="price[]" placeholder="Цена" step="0.01" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px;">
+                        <input type="number" name="stock[]" placeholder="Кол-во" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px;">
+                        <button type="button" onclick="this.closest('.variant-row').remove()" style="background: none; border: none; color: #dc3545; cursor: pointer;">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <button type="button" onclick="addVariantRow()" class="btn-outline" style="margin-bottom: 30px;">
+                    <i class="bi bi-plus-lg" style="margin-right: 8px;"></i>Добавить вариант
+                </button>
+                
+                <!-- Изображения -->
+                <h3 style="margin: 30px 0 20px;">Изображения</h3>
+                
+                {% if product %}
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;">
+                    {% for image in product.images.all %}
+                    <div style="position: relative; width: 100px;">
+                        <img src="{{ image.image.url }}" alt="" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;">
+                        {% if image.is_main %}
+                        <span style="position: absolute; top: 5px; right: 5px; background: var(--accent-primary); color: white; padding: 2px 5px; border-radius: 5px; font-size: 0.7rem;">Главное</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Загрузить новые изображения</label>
+                    <input type="file" name="images" multiple accept="image/*" style="width: 100%; padding: 12px; border: 2px dashed var(--border-color); border-radius: 10px;">
+                </div>
+                
+                <!-- Статус -->
+                <div style="margin-bottom: 25px;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" name="is_active" {% if product.is_active or not product %}checked{% endif %}>
+                        <span>Товар активен (отображается на сайте)</span>
+                    </label>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-top: 30px;">
+                    <button type="submit" class="btn-main" style="flex: 1; padding: 15px;">
+                        <i class="bi bi-check-lg" style="margin-right: 8px;"></i>Сохранить
+                    </button>
+                    <a href="{% url 'manage_products' %}" class="btn-outline" style="flex: 1; padding: 15px; text-align: center; text-decoration: none;">
+                        <i class="bi bi-x-lg" style="margin-right: 8px;"></i>Отмена
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function addVariantRow() {
+    const container = document.getElementById('variants-container');
+    const row = document.createElement('div');
+    row.className = 'variant-row';
+    row.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; padding: 15px; background: #f8f8f8; border-radius: 10px;';
+    
+    row.innerHTML = `
+        <select name="size[]" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px;">
+            <option value="">Размер</option>
+            {% for size in sizes %}
+            <option value="{{ size.id }}">{{ size.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="color[]" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px;">
+            <option value="">Цвет</option>
+            {% for color in colors %}
+            <option value="{{ color.id }}">{{ color.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" name="price[]" placeholder="Цена" step="0.01" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px;">
+        <input type="number" name="stock[]" placeholder="Кол-во" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px;">
+        <button type="button" onclick="this.closest('.variant-row').remove()" style="background: none; border: none; color: #dc3545; cursor: pointer;">
+            <i class="bi bi-trash"></i>
+        </button>
+    `;
+    
+    container.appendChild(row);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Страница не найдена{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div class="container" style="text-align: center; padding: 100px 5%;">
+        <h1 style="font-family: 'Playfair Display'; font-size: 8rem; margin: 0; color: var(--accent-primary);">404</h1>
+        <h2 style="font-size: 2rem; margin: 20px 0;">Страница не найдена</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 40px;">Возможно, страница была удалена или вы указали неверный адрес</p>
+        <a href="{% url 'home' %}" class="btn-main" style="padding: 15px 40px;">
+            <i class="bi bi-house" style="margin-right: 8px;"></i>Вернуться на главную
+        </a>
+    </div>
+</div>
+{% endblock %}

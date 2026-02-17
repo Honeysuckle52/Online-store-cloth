@@ -1,0 +1,97 @@
+{% load static %}
+<nav class="navbar">
+    <div class="container">
+        <a href="{% url 'home' %}" class="brand">CLOTH.</a>
+
+        <div class="nav-links">
+            <a href="{% url 'catalog' %}">Каталог</a>
+
+            {% if user.is_authenticated %}
+                <a href="{% url 'wishlist' %}" class="nav-icon">
+                    <i class="bi bi-heart"></i>
+                    {% with wishlist_count=user.wishlist.count %}
+                        {% if wishlist_count > 0 %}
+                            <span class="badge">{{ wishlist_count }}</span>
+                        {% endif %}
+                    {% endwith %}
+                </a>
+
+                <a href="{% url 'cart' %}" class="nav-icon" id="cart-icon">
+                    <i class="bi bi-bag"></i>
+                    <span class="badge" id="cart-counter">{{ cart_items|default:0 }}</span>
+                </a>
+
+                <div class="dropdown" style="position: relative;">
+                    <a href="#" class="nav-icon" onclick="toggleDropdown(event)">
+                        <i class="bi bi-person-circle"></i>
+                    </a>
+                    <div class="dropdown-menu" id="userDropdown" style="display: none; position: absolute; right: 0; top: 40px; background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 0.5rem 0; min-width: 200px; box-shadow: var(--shadow-md); z-index: 1000;">
+                        <a class="dropdown-item" href="{% url 'profile' %}" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: var(--text-primary);">
+                            <i class="bi bi-person" style="margin-right: 8px;"></i>Профиль
+                        </a>
+                        <a class="dropdown-item" href="{% url 'order_history' %}" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: var(--text-primary);">
+                            <i class="bi bi-box" style="margin-right: 8px;"></i>Мои заказы
+                        </a>
+                        <a class="dropdown-item" href="{% url 'wishlist' %}" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: var(--text-primary);">
+                            <i class="bi bi-heart" style="margin-right: 8px;"></i>Избранное
+                            {% if user.wishlist.count %}
+                                <span style="background: var(--accent-primary); color: white; padding: 0.2rem 0.5rem; border-radius: 50px; font-size: 0.8rem; margin-left: 8px;">{{ user.wishlist.count }}</span>
+                            {% endif %}
+                        </a>
+
+                        {% if user.role.name == 'moderator' or user.role.name == 'admin' or user.is_staff %}
+                        <div style="height: 1px; background: var(--border-color); margin: 0.5rem 0;"></div>
+                        <a class="dropdown-item" href="{% url 'moderate_reviews' %}" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: var(--text-primary);">
+                            <i class="bi bi-chat" style="margin-right: 8px;"></i>Модерация отзывов
+                        </a>
+                        <a class="dropdown-item" href="{% url 'manage_products' %}" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: var(--text-primary);">
+                            <i class="bi bi-grid" style="margin-right: 8px;"></i>Управление товарами
+                        </a>
+                        {% endif %}
+
+                        {% if user.is_superuser or user.role.name == 'admin' %}
+                        <a class="dropdown-item" href="{% url 'admin_dashboard' %}">Панель управления</a>
+                            <i class="bi bi-speedometer2" style="margin-right: 8px;"></i>Панель управления
+                        </a>
+                        <a class="dropdown-item" href="/admin/" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: var(--text-primary);">
+                            <i class="bi bi-gear" style="margin-right: 8px;"></i>Django Admin
+                        </a>
+                        {% endif %}
+
+                        <div style="height: 1px; background: var(--border-color); margin: 0.5rem 0;"></div>
+                        <a class="dropdown-item" href="{% url 'logout' %}" style="display: block; padding: 0.5rem 1rem; text-decoration: none; color: #dc3545;">
+                            <i class="bi bi-box-arrow-right" style="margin-right: 8px;"></i>Выйти
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <a href="{% url 'login' %}">Войти</a>
+                <a href="{% url 'register' %}" class="btn-main">Регистрация</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<script>
+function toggleDropdown(event) {
+    event.preventDefault();
+    const dropdown = document.getElementById('userDropdown');
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+}
+
+// Закрыть дропдаун при клике вне его
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('userDropdown');
+    const trigger = event.target.closest('.dropdown');
+    if (!trigger && dropdown) {
+        dropdown.style.display = 'none';
+    }
+});
+</script>
+
+<form action="{% url 'catalog' %}" method="get" style="display: flex; align-items: center;">
+    <input type="text" name="q" placeholder="Поиск..." value="{{ request.GET.q }}" style="padding: 8px 15px; border: 1px solid var(--border-color); border-radius: 50px 0 0 50px; width: 200px;">
+    <button type="submit" style="padding: 8px 15px; background: var(--accent-primary); color: white; border: none; border-radius: 0 50px 50px 0; cursor: pointer;">
+        <i class="bi bi-search"></i>
+    </button>
+</form>

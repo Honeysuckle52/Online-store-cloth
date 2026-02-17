@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}История заказов{% endblock %}
+
+{% block content %}
+<div class="order-history-page">
+    <div class="container" style="padding: 40px 5%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin: 0;">История заказов</h1>
+            <a href="{% url 'profile' %}" style="color: var(--text-secondary); text-decoration: none;">
+                <i class="bi bi-arrow-left"></i> Вернуться в профиль
+            </a>
+        </div>
+
+        {% if orders %}
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                {% for order in orders %}
+                <div style="background: white; border-radius: 16px; padding: 25px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div>
+                            <span style="font-weight: 700; font-size: 1.2rem;">Заказ #{{ order.order_number }}</span>
+                            <p style="margin: 5px 0 0; color: var(--text-secondary);">{{ order.created_at|date:"d.m.Y H:i" }}</p>
+                        </div>
+                        <span style="padding: 5px 15px; border-radius: 50px; font-size: 0.9rem; background:
+                            {% if order.status.name == 'created' %}#E9DBCB
+                            {% elif order.status.name == 'paid' %}#D4A373
+                            {% elif order.status.name == 'shipped' %}#8C7E72
+                            {% elif order.status.name == 'delivered' %}#4A3F35
+                            {% elif order.status.name == 'cancelled' %}#dc3545
+                            {% endif %};
+                            color: {% if order.status.name == 'delivered' %}white{% else %}var(--text-primary){% endif %};">
+                            {{ order.status.get_name_display }}
+                        </span>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        {% for item in order.items.all|slice:":3" %}
+                        <div style="display: flex; align-items: center; gap: 15px; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
+                            {% with main_image=item.variant.product.get_main_image %}
+                                {% if main_image %}
+                                    <img src="{{ main_image.image.url }}" alt="" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+                                {% endif %}
+                            {% endwith %}
+                            <div style="flex: 1;">
+                                <p style="margin: 0; font-weight: 500;">{{ item.variant.product.name }}</p>
+                                <p style="margin: 5px 0 0; color: var(--text-secondary); font-size: 0.9rem;">
+                                    {{ item.quantity }} x {{ item.price_per_unit }} ₽
+                                    {% if item.variant.size %}, Размер: {{ item.variant.size.name }}{% endif %}
+                                </p>
+                            </div>
+                            <span style="font-weight: 600;">{{ item.total_price }} ₽</span>
+                        </div>
+                        {% endfor %}
+                        {% if order.items.count > 3 %}
+                        <p style="margin-top: 10px; color: var(--text-secondary);">и еще {{ order.items.count|add:"-3" }} товаров</p>
+                        {% endif %}
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                        <div>
+                            <p style="margin: 0; color: var(--text-secondary);">Адрес доставки:</p>
+                            <p style="margin: 5px 0 0;">{{ order.delivery_address }}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <p style="margin: 0; color: var(--text-secondary);">Итого:</p>
+                            <p style="margin: 5px 0 0; font-size: 1.3rem; font-weight: 700; color: var(--accent-primary);">{{ order.total_amount }} ₽</p>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; display: flex; gap: 15px;">
+                        <a href="{% url 'order_detail' order.id %}" class="btn-outline" style="padding: 10px 25px;">Подробнее</a>
+                        {% if order.status.name == 'created' %}
+                        <a href="{% url 'payment' order.id %}" class="btn-main" style="padding: 10px 25px;">Оплатить</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 60px; background: white; border-radius: 20px; border: 1px solid var(--border-color);">
+                <i class="bi bi-box" style="font-size: 4rem; color: var(--text-secondary);"></i>
+                <h3 style="margin: 20px 0 10px;">У вас пока нет заказов</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 30px;">Перейдите в каталог, чтобы выбрать понравившиеся товары</p>
+                <a href="{% url 'catalog' %}" class="btn-main" style="padding: 12px 40px;">Перейти в каталог</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

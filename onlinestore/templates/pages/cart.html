@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Корзина{% endblock %}
+
+{% block content %}
+<div class="cart-page">
+    <div class="container" style="padding: 40px 5%;">
+        <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin-bottom: 40px;">Корзина</h1>
+        
+        {% if cart and cart.items.all %}
+        <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px;">
+            <!-- Список товаров -->
+            <div>
+                {% for item in cart.items.all %}
+                <div class="cart-item" style="background: white; border-radius: 20px; padding: 20px; margin-bottom: 15px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); transition: var(--transition);" id="cart-item-{{ item.id }}">
+                    <div style="display: flex; gap: 20px;">
+                        <!-- Изображение товара -->
+                        <a href="{% url 'product_detail' item.variant.product.slug %}" style="flex-shrink: 0;">
+                            {% with main_image=item.variant.product.get_main_image %}
+                                {% if main_image %}
+                                    <img src="{{ main_image.image.url }}" alt="{{ item.variant.product.name }}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 15px;">
+                                {% else %}
+                                    <div style="width: 120px; height: 120px; background: var(--border-color); border-radius: 15px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-image" style="font-size: 2rem; color: var(--text-secondary);"></i>
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
+                        </a>
+                        
+                        <!-- Информация о товаре -->
+                        <div style="flex: 1;">
+                            <a href="{% url 'product_detail' item.variant.product.slug %}" style="text-decoration: none; color: var(--text-primary);">
+                                <h3 style="margin: 0 0 8px 0; font-size: 1.2rem;">{{ item.variant.product.name }}</h3>
+                            </a>
+                            
+                            <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 10px; color: var(--text-secondary); font-size: 0.9rem;">
+                                {% if item.variant.size %}
+                                <span><i class="bi bi-rulers"></i> Размер: {{ item.variant.size.name }}</span>
+                                {% endif %}
+                                {% if item.variant.color %}
+                                <span>
+                                    <i class="bi bi-palette"></i> Цвет: 
+                                    <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: {{ item.variant.color.hex_code }}; margin-left: 5px; vertical-align: middle;"></span>
+                                    {{ item.variant.color.name }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <!-- Количество -->
+                                <div style="display: flex; align-items: center; gap: 10px; background: var(--border-color); padding: 5px; border-radius: 10px;">
+                                    <button class="quantity-btn" onclick="updateQuantity({{ item.id }}, -1)" style="width: 30px; height: 30px; border: none; background: white; border-radius: 8px; cursor: pointer; transition: var(--transition);" onmouseover="this.style.background='var(--accent-primary)'; this.style.color='white'" onmouseout="this.style.background='white'; this.style.color='var(--text-primary)'">
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                    <span class="quantity-display" id="quantity-{{ item.id }}" style="min-width: 30px; text-align: center; font-weight: 600;">{{ item.quantity }}</span>
+                                    <button class="quantity-btn" onclick="updateQuantity({{ item.id }}, 1)" style="width: 30px; height: 30px; border: none; background: white; border-radius: 8px; cursor: pointer; transition: var(--transition);" onmouseover="this.style.background='var(--accent-primary)'; this.style.color='white'" onmouseout="this.style.background='white'; this.style.color='var(--text-primary)'">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Цена -->
+                                <div style="font-weight: 700; font-size: 1.3rem; color: var(--accent-primary);">
+                                    <span id="item-total-{{ item.id }}">{{ item.get_total_price }}</span> ₽
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Кнопка удаления -->
+                        <button onclick="removeFromCart({{ item.id }})" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.2rem; transition: var(--transition);" onmouseover="this.style.color='#dc3545'" onmouseout="this.style.color='var(--text-secondary)'">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Итоговая информация -->
+            <div>
+                <div style="background: #F2EDE4; border-radius: 24px; padding: 30px; position: sticky; top: 100px;">
+                    <h3 style="margin: 0 0 20px 0; font-family: 'Playfair Display'; font-size: 1.5rem;">Ваш заказ</h3>
+                    
+                    <div style="margin-bottom: 20px;">
+                        {% for item in cart.items.all %}
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.95rem;">
+                            <span>{{ item.variant.product.name|truncatechars:30 }} x{{ item.quantity }}</span>
+                            <span>{{ item.get_total_price }} ₽</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <hr style="border: none; border-top: 2px solid var(--border-color); margin: 20px 0;">
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Товары ({{ cart.get_total_items }} шт.)</span>
+                        <span>{{ cart.get_total_price }} ₽</span>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Доставка</span>
+                        <span>Бесплатно</span>
+                    </div>
+                    
+                    <hr style="border: none; border-top: 2px solid var(--border-color); margin: 20px 0;">
+                    
+                    <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.3rem; margin-bottom: 30px;">
+                        <span>Итого:</span>
+                        <span style="color: var(--accent-primary);" id="cart-total">{{ cart.get_total_price }} ₽</span>
+                    </div>
+                    
+                    <a href="{% url 'checkout' %}" class="btn-main" style="display: block; text-align: center; padding: 15px; font-size: 1.1rem; margin-bottom: 15px;">
+                        Перейти к оформлению
+                    </a>
+                    
+                    <a href="{% url 'catalog' %}" class="btn-outline" style="display: block; text-align: center; padding: 15px;">
+                        Продолжить покупки
+                    </a>
+                    
+                    <button onclick="clearCart()" style="display: block; text-align: center; width: 100%; margin-top: 15px; background: none; border: none; color: var(--text-secondary); text-decoration: underline; cursor: pointer;">
+                        Очистить корзину
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <!-- Пустая корзина -->
+        <div style="text-align: center; padding: 80px 20px; background: white; border-radius: 30px; border: 1px solid var(--border-color);">
+            <i class="bi bi-cart" style="font-size: 5rem; color: var(--text-secondary);"></i>
+            <h2 style="margin: 20px 0 10px; font-family: 'Playfair Display';">Корзина пуста</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 30px;">Добавьте товары в корзину, чтобы оформить заказ</p>
+            <a href="{% url 'catalog' %}" class="btn-main" style="padding: 15px 40px;">Перейти в каталог</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function updateQuantity(itemId, change) {
+    const quantityElement = document.getElementById(`quantity-${itemId}`);
+    const currentQuantity = parseInt(quantityElement.textContent);
+    const newQuantity = currentQuantity + change;
+    
+    if (newQuantity < 1) return;
+    
+    fetch(`/cart/update/${itemId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `quantity=${newQuantity}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            quantityElement.textContent = newQuantity;
+            document.getElementById(`item-total-${itemId}`).textContent = data.item_total;
+            document.getElementById('cart-total').textContent = data.cart_total + ' ₽';
+            
+            const cartCounter = document.getElementById('cart-counter');
+            if (cartCounter) {
+                cartCounter.textContent = data.cart_items;
+            }
+            
+            showNotification(data.message, 'success');
+        }
+    });
+}
+
+function removeFromCart(itemId) {
+    if (!confirm('Удалить товар из корзины?')) return;
+    
+    fetch(`/cart/remove/${itemId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const itemElement = document.getElementById(`cart-item-${itemId}`);
+            itemElement.style.animation = 'slideOut 0.3s ease';
+
+            setTimeout(() => {
+                itemElement.remove();
+
+                document.getElementById('cart-total').textContent = data.cart_total + ' ₽';
+                const cartCounter = document.getElementById('cart-counter');
+                if (cartCounter) {
+                    cartCounter.textContent = data.cart_items;
+                }
+
+                if (data.cart_items === 0) {
+                    location.reload();
+                }
+            }, 300);
+
+            showNotification('Товар удален', 'info');
+        }
+    });
+}
+
+function clearCart() {
+    if (!confirm('Очистить корзину?')) return;
+
+    fetch('/cart/clear/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(() => {
+        location.reload();
+    });
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type}`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1rem 2rem;
+        box-shadow: var(--shadow-md);
+        z-index: 9999;
+        animation: slideIn 0.3s ease;
+    `;
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+</script>
+
+<style>
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+</style>
+{% endblock %}

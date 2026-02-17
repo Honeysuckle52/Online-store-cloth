@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Вход в аккаунт{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="container" style="min-height: 70vh; display: flex; align-items: center; justify-content: center; padding: 3rem 0;">
+        <div style="background: white; border-radius: 30px; padding: 3rem; width: 100%; max-width: 450px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color);">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin-bottom: 0.5rem; color: var(--text-primary);">Добро пожаловать!</h1>
+                <p style="color: var(--text-secondary);">Войдите в свой аккаунт</p>
+            </div>
+
+            <form method="post" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                {% csrf_token %}
+
+                <div>
+                    <label for="email" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-primary);">Email</label>
+                    <input type="email"
+                           name="email"
+                           id="email"
+                           placeholder="your@email.com"
+                           style="width: 100%; padding: 1rem; border: 2px solid var(--border-color); border-radius: 15px; font-size: 1rem; transition: var(--transition);"
+                           onfocus="this.style.borderColor='var(--accent-primary)'; this.style.outline='none';"
+                           onblur="this.style.borderColor='var(--border-color)';">
+                </div>
+
+                <div>
+                    <label for="password" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-primary);">Пароль</label>
+                    <input type="password"
+                           name="password"
+                           id="password"
+                           placeholder="••••••••"
+                           style="width: 100%; padding: 1rem; border: 2px solid var(--border-color); border-radius: 15px; font-size: 1rem; transition: var(--transition);"
+                           onfocus="this.style.borderColor='var(--accent-primary)'; this.style.outline='none';"
+                           onblur="this.style.borderColor='var(--border-color)';">
+                </div>
+
+                <button type="submit"
+                        class="btn-main"
+                        style="width: 100%; padding: 1rem; font-size: 1.1rem; margin-top: 1rem;">
+                    Войти
+                </button>
+
+                <div style="text-align: center; margin-top: 1rem;">
+                    <p style="color: var(--text-secondary);">
+                        Нет аккаунта?
+                        <a href="{% url 'register' %}" style="color: var(--accent-primary); text-decoration: none; font-weight: 600; margin-left: 0.5rem;">
+                            Зарегистрироваться
+                        </a>
+                    </p>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

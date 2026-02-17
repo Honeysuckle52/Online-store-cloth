@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Модерация отзывов{% endblock %}
+
+{% block content %}
+<div class="moderate-page">
+    <div class="container" style="padding: 40px 5%;">
+        <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin-bottom: 30px;">Модерация отзывов</h1>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+            <!-- Отзывы на модерации -->
+            <div>
+                <h2 style="margin-bottom: 20px;">На модерации ({{ pending_reviews.count }})</h2>
+                
+                {% if pending_reviews %}
+                    {% for review in pending_reviews %}
+                    <div style="background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                            <div>
+                                <strong>{{ review.user.get_full_name|default:review.user.email }}</strong>
+                                <span style="color: var(--text-secondary); margin-left: 10px;">{{ review.created_at|date:"d.m.Y H:i" }}</span>
+                            </div>
+                            <div style="color: #ffc107;">
+                                {% for i in "12345"|make_list %}
+                                    {% if forloop.counter <= review.rating %}
+                                        <i class="bi bi-star-fill"></i>
+                                    {% else %}
+                                        <i class="bi bi-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <p style="margin-bottom: 10px;"><strong>Товар:</strong> <a href="{% url 'product_detail' review.product.slug %}">{{ review.product.name }}</a></p>
+                        <p style="background: var(--border-color); padding: 15px; border-radius: 12px; margin-bottom: 15px;">{{ review.comment }}</p>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <a href="{% url 'approve_review' review.id %}" class="btn-main" style="padding: 8px 20px;">Одобрить</a>
+                            <a href="{% url 'reject_review' review.id %}" class="btn-outline" style="padding: 8px 20px; color: #dc3545;" onclick="return confirm('Удалить отзыв?')">Отклонить</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; padding: 40px; background: white; border-radius: 16px;">
+                        <i class="bi bi-check-circle" style="font-size: 3rem; color: var(--text-secondary);"></i>
+                        <p style="margin-top: 15px;">Нет отзывов на модерации</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Последние промодерированные -->
+            <div>
+                <h2 style="margin-bottom: 20px;">Последние промодерированные</h2>
+                
+                {% if moderated_reviews %}
+                    {% for review in moderated_reviews %}
+                    <div style="background: #f8f8f8; border-radius: 16px; padding: 15px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <div>
+                                <strong>{{ review.user.get_full_name|default:review.user.email }}</strong>
+                                <span style="color: var(--text-secondary); font-size: 0.9rem; margin-left: 10px;">{{ review.created_at|date:"d.m.Y" }}</span>
+                            </div>
+                            <span style="color: #28a745;"><i class="bi bi-check-circle-fill"></i> Одобрено</span>
+                        </div>
+                        <p style="font-size: 0.9rem;">Товар: {{ review.product.name }}</p>
+                        <p style="font-size: 0.9rem; color: var(--text-secondary);">Модератор: {{ review.moderated_by.get_full_name|default:review.moderated_by.email }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: var(--text-secondary);">Нет промодерированных отзывов</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

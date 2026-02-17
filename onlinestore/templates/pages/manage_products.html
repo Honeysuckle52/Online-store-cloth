@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Управление товарами{% endblock %}
+
+{% block content %}
+<div class="manage-products-page">
+    <div class="container" style="padding: 40px 5%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin: 0;">Управление товарами</h1>
+            <a href="{% url 'add_product' %}" class="btn-main">
+                <i class="bi bi-plus-lg" style="margin-right: 8px;"></i>Добавить товар
+            </a>
+        </div>
+        
+        <!-- Фильтр по категориям -->
+        <div style="margin-bottom: 30px;">
+            <form method="get" style="display: flex; gap: 15px; align-items: center;">
+                <select name="category" style="padding: 10px 15px; border: 2px solid var(--border-color); border-radius: 10px; min-width: 200px;">
+                    <option value="">Все категории</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"i" %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="search" placeholder="Поиск по названию" value="{{ request.GET.search }}" style="padding: 10px 15px; border: 2px solid var(--border-color); border-radius: 10px; flex: 1;">
+                <button type="submit" class="btn-outline">Применить</button>
+                <a href="{% url 'manage_products' %}" class="btn-outline">Сбросить</a>
+            </form>
+        </div>
+        
+        <!-- Список товаров -->
+        <div style="background: white; border-radius: 20px; border: 1px solid var(--border-color); overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead style="background: var(--border-color);">
+                    <tr>
+                        <th style="padding: 15px; text-align: left;">Фото</th>
+                        <th style="padding: 15px; text-align: left;">Название</th>
+                        <th style="padding: 15px; text-align: left;">Категория</th>
+                        <th style="padding: 15px; text-align: left;">Цена</th>
+                        <th style="padding: 15px; text-align: left;">Варианты</th>
+                        <th style="padding: 15px; text-align: left;">Статус</th>
+                        <th style="padding: 15px; text-align: left;">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 15px;">
+                            {% with main_image=product.get_main_image %}
+                                {% if main_image %}
+                                    <img src="{{ main_image.image.url }}" alt="" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+                                {% else %}
+                                    <div style="width: 60px; height: 60px; background: var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-image" style="color: var(--text-secondary);"></i>
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td style="padding: 15px; font-weight: 500;">{{ product.name }}</td>
+                        <td style="padding: 15px;">{{ product.category.name|default:"-" }}</td>
+                        <td style="padding: 15px; font-weight: 600; color: var(--accent-primary);">{{ product.price }} ₽</td>
+                        <td style="padding: 15px;">{{ product.variants.count }} шт.</td>
+                        <td style="padding: 15px;">
+                            {% if product.is_active %}
+                                <span style="color: #28a745;">Активен</span>
+                            {% else %}
+                                <span style="color: #dc3545;">Неактивен</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 15px;">
+                            <div style="display: flex; gap: 10px;">
+                                <a href="{% url 'edit_product' product.id %}" style="color: var(--accent-primary); text-decoration: none;">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="#" style="color: #dc3545; text-decoration: none;" onclick="return confirm('Удалить товар?')">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                            Товары не найдены
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
