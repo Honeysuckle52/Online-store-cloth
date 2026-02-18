@@ -5,7 +5,6 @@
 
 // --- Notification system (single global implementation) ---
 function showNotification(message, type = 'success') {
-    // Remove any existing notification to avoid stacking
     const existing = document.querySelector('.cloth-notification');
     if (existing) existing.remove();
 
@@ -36,6 +35,22 @@ function showNotification(message, type = 'success') {
 
 // --- Wishlist toggle (global, used from product cards & home) ---
 function toggleWishlist(element, productId) {
+    const icon = element.querySelector('i');
+    const wasActive = element.classList.contains('active');
+
+    // Оптимистичное обновление UI
+    if (wasActive) {
+        icon.classList.remove('bi-heart-fill');
+        icon.classList.add('bi-heart');
+        element.classList.remove('active');
+        element.style.color = 'var(--text-secondary)';
+    } else {
+        icon.classList.remove('bi-heart');
+        icon.classList.add('bi-heart-fill');
+        element.classList.add('active');
+        element.style.color = '#ff4d4d';
+    }
+
     fetch(`/wishlist/toggle/${productId}/`, {
         method: 'GET',
         headers: {
@@ -45,23 +60,57 @@ function toggleWishlist(element, productId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            const icon = element.querySelector('i');
             if (data.in_wishlist) {
+                showNotification('Товар добавлен в избранное', 'success');
+                updateWishlistCounter(data.wishlist_count);
+            } else {
+                showNotification('Товар удален из избранного', 'info');
+                updateWishlistCounter(data.wishlist_count);
+            }
+        } else {
+            // Если ошибка, возвращаем исходное состояние
+            if (wasActive) {
                 icon.classList.remove('bi-heart');
                 icon.classList.add('bi-heart-fill');
+                element.classList.add('active');
                 element.style.color = '#ff4d4d';
-                showNotification('Товар добавлен в избранное', 'success');
             } else {
                 icon.classList.remove('bi-heart-fill');
                 icon.classList.add('bi-heart');
+                element.classList.remove('active');
                 element.style.color = 'var(--text-secondary)';
-                showNotification('Товар удален из избранного', 'info');
             }
+            showNotification('Ошибка при обновлении избранного', 'error');
         }
     })
     .catch(() => {
+        // При ошибке сети возвращаем исходное состояние
+        if (wasActive) {
+            icon.classList.remove('bi-heart');
+            icon.classList.add('bi-heart-fill');
+            element.classList.add('active');
+            element.style.color = '#ff4d4d';
+        } else {
+            icon.classList.remove('bi-heart-fill');
+            icon.classList.add('bi-heart');
+            element.classList.remove('active');
+            element.style.color = 'var(--text-secondary)';
+        }
         showNotification('Ошибка соединения', 'error');
     });
+}
+
+// --- Update wishlist counter in navigation ---
+function updateWishlistCounter(count) {
+    const wishlistBadge = document.querySelector('a[href="/wishlist/"] .badge, .nav-icon .badge');
+    if (wishlistBadge) {
+        if (count > 0) {
+            wishlistBadge.textContent = count;
+            wishlistBadge.style.display = 'flex';
+        } else {
+            wishlistBadge.style.display = 'none';
+        }
+    }
 }
 
 // --- Quick add to cart (global, used from product cards) ---
@@ -71,7 +120,6 @@ function quickAddToCart(variantId) {
         return;
     }
 
-    // Get CSRF token from cookie
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
         || getCookie('csrftoken');
 
@@ -88,6 +136,7 @@ function quickAddToCart(variantId) {
             const cartCounter = document.getElementById('cart-counter');
             if (cartCounter) {
                 cartCounter.textContent = data.cart_items;
+                cartCounter.style.display = data.cart_items > 0 ? 'flex' : 'none';
             }
             showNotification(data.message, 'success');
         }
@@ -152,6 +201,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const cartCounter = document.getElementById('cart-counter');
                     if (cartCounter) {
                         cartCounter.textContent = data.cart_items;
+                        cartCounter.style.display = data.cart_items > 0 ? 'flex' : 'none';
                     }
                     showNotification(data.message, 'success');
                 }
@@ -162,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // 3. Auto-hide alert messages after 5 seconds
-    const alerts = document.querySelectorAll('.alert');
+    const alerts = document.querySelectorAll('.alert:not(.cloth-notification)');
     alerts.forEach(alert => {
         setTimeout(() => {
             alert.style.animation = 'fadeOut 0.3s ease';

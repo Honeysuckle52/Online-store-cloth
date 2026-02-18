@@ -43,12 +43,21 @@
                     </div>
                 </a>
 
-                <a href="{% url 'toggle_wishlist' product.id %}"
-                   class="wishlist-btn"
-                   style="position: absolute; top: 15px; right: 15px; background: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: var(--text-secondary); box-shadow: var(--shadow-sm); transition: var(--transition);"
-                   onclick="event.preventDefault(); toggleWishlist(this, '{{ product.id }}');">
-                    <i class="bi bi-heart"></i>
-                </a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'toggle_wishlist' product.id %}"
+                       class="wishlist-btn {% if product.id in wishlist_ids %}active{% endif %}"
+                       data-product-id="{{ product.id }}"
+                       style="position: absolute; top: 15px; right: 15px; background: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: {% if product.id in wishlist_ids %}#ff4d4d{% else %}var(--text-secondary){% endif %}; box-shadow: var(--shadow-sm); transition: var(--transition);"
+                       onclick="event.preventDefault(); toggleWishlist(this, '{{ product.id }}');">
+                        <i class="bi {% if product.id in wishlist_ids %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+                    </a>
+                {% else %}
+                    <a href="{% url 'login' %}?next={{ request.path }}"
+                       class="wishlist-btn"
+                       style="position: absolute; top: 15px; right: 15px; background: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: var(--text-secondary); box-shadow: var(--shadow-sm); transition: var(--transition);">
+                        <i class="bi bi-heart"></i>
+                    </a>
+                {% endif %}
             </div>
         {% endfor %}
     </div>
@@ -85,6 +94,4 @@
         </div>
     </div>
 </div>
-
-
 {% endblock %}

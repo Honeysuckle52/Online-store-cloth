@@ -58,10 +58,16 @@ def home(request):
         is_active=True, is_bestseller=True
     ).select_related('category')[:4]
 
+    # Получаем список ID товаров в избранном для текущего пользователя
+    wishlist_ids = []
+    if request.user.is_authenticated:
+        wishlist_ids = list(request.user.wishlist.values_list('product_id', flat=True))
+
     return render(request, "pages/home.html", {
         "products": products,
         "new_products": new_products,
-        "bestsellers": bestsellers
+        "bestsellers": bestsellers,
+        "wishlist_ids": wishlist_ids,  # Добавляем в контекст
     })
 
 
@@ -73,10 +79,7 @@ def catalog(request):
     ).prefetch_related('variants', 'images')
 
     # Получаем все размеры и цвета для фильтров
-    # Фильтруем только буквенные размеры (XS, S, M, L, XL, XXL, XXXL)
-    all_sizes_qs = Size.objects.all().order_by('order')
-    # Фильтруем размеры, оставляя только те, что содержат только буквы
-    sizes = [s for s in all_sizes_qs if s.name.replace('-', '').replace('/', '').isalpha()]
+    sizes = Size.objects.all().order_by('order')
     colors = Color.objects.all()
 
     # Получаем выбранные значения из GET параметров
@@ -130,6 +133,11 @@ def catalog(request):
         max_price=Max('price')
     )
 
+    # Получаем список ID товаров в избранном для текущего пользователя
+    wishlist_ids = []
+    if request.user.is_authenticated:
+        wishlist_ids = list(request.user.wishlist.values_list('product_id', flat=True))
+
     context = {
         'page_obj': page_obj,
         'products': page_obj,
@@ -141,10 +149,10 @@ def catalog(request):
         'min_price_global': price_stats['min_price'] or 0,
         'max_price_global': price_stats['max_price'] or 100000,
         'selected_category': cat_slug,
+        'wishlist_ids': wishlist_ids,  # Добавляем в контекст
     }
 
     return render(request, "pages/catalog.html", context)
-
 
 def product_detail(request, slug):
     """Детальная страница товара"""
@@ -280,7 +288,6 @@ def toggle_wishlist(request, product_id):
 
     messages.success(request, message)
     return redirect(request.META.get('HTTP_REFERER', 'catalog'))
-
 
 # --- КОРЗИНА ---
 @login_required
