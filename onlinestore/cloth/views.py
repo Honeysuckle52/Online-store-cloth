@@ -73,7 +73,10 @@ def catalog(request):
     ).prefetch_related('variants', 'images')
 
     # Получаем все размеры и цвета для фильтров
-    sizes = Size.objects.all().order_by('order')
+    # Фильтруем только буквенные размеры (XS, S, M, L, XL, XXL, XXXL)
+    all_sizes_qs = Size.objects.all().order_by('order')
+    # Фильтруем размеры, оставляя только те, что содержат только буквы
+    sizes = [s for s in all_sizes_qs if s.name.replace('-', '').replace('/', '').isalpha()]
     colors = Color.objects.all()
 
     # Получаем выбранные значения из GET параметров
@@ -391,7 +394,7 @@ def clear_cart(request):
     try:
         cart = Cart.objects.get(user=request.user)
         cart.items.all().delete()
-        messages.success(request, 'Корзина очищена')
+        messages.success(request, 'Корзина оч��щена')
     except Cart.DoesNotExist:
         messages.info(request, 'Корзина уже пуста')
 
@@ -440,7 +443,7 @@ def checkout(request):
             for cart_item in cart.items.select_related('variant__product').all():
                 if cart_item.variant.stock_quantity < cart_item.quantity:
                     out_of_stock.append(
-                        f"{cart_item.variant.product.name} (доступно: {cart_item.variant.stock_quantity} шт.)"
+                        f"{cart_item.variant.product.name} (��оступно: {cart_item.variant.stock_quantity} шт.)"
                     )
 
             if out_of_stock:
@@ -839,7 +842,7 @@ def change_password(request):
 # --- МОДЕРАЦИЯ ОТЗЫВОВ ---
 @user_passes_test(is_moderator)
 def moderate_reviews(request):
-    """Модерация отзывов"""
+    """Модерац��я отзывов"""
     pending_reviews = Review.objects.filter(is_moderated=False).select_related('product', 'user').order_by(
         '-created_at')
     moderated_reviews = Review.objects.filter(is_moderated=True).select_related('product', 'user',
@@ -1099,6 +1102,122 @@ def export_orders(request):
             order.user.email,
             order.created_at.strftime('%d.%m.%Y %H:%M'),
             order.total_amount,
+            order.status.get_name_display(),
+            order.delivery_address
+        ])
+
+    return response
+
+
+@user_passes_test(is_admin)
+def export_orders_utf8(request):
+    """Экспорт заказов в CSV с поддержкой UTF-8 BOM (для Excel)"""
+    import codecs
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="orders_utf8.csv"'
+
+    # Добавляем BOM для правильного отображения в Excel
+    response.write(codecs.BOM_UTF8)
+
+    writer = csv.writer(response, delimiter=';', quoting=csv.QUOTE_MINIMAL)
+
+    # Заголовки на русском
+    writer.writerow(['Номер заказа', 'Пользователь', 'Email', 'Дата', 'Сумма', 'Статус', 'Адрес'])
+
+    orders = Order.objects.select_related('user', 'status').all()
+    for order in orders:
+        writer.writerow([
+            order.order_number,
+            order.user.get_full_name() or order.user.email,
+            order.user.email,
+            order.created_at.strftime('%d.%m.%Y %H:%M'),
+            str(order.total_amount).replace('.', ','),  # Заменяем точку на запятую для Excel
+            order.status.get_name_display(),
+            order.delivery_address
+        ])
+
+    return response
+
+
+@user_passes_test(is_admin)
+def export_orders_excel(request):
+    """Экспорт заказов в Excel с поддержкой русского текста"""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+    except ImportError:
+        messages.error(request, 'Библиотека openpyxl не установлена. Установите: pip install openpyxl')
+        return redirect('admin_dashboard')
+
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Заказы"
+
+    # Заголовки
+    headers = ['Номер заказа', 'Пользователь', 'Email', 'Дата', 'Сумма', 'Статус', 'Адрес доставки']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True, size=12)
+        cell.fill = PatternFill(start_color="D4A373", end_color="D4A373", fill_type="solid")
+        cell.alignment = Alignment(horizontal='center')
+
+    # Данные
+    orders = Order.objects.select_related('user', 'status').all()
+    for row, order in enumerate(orders, 2):
+        ws.cell(row=row, column=1, value=order.order_number)
+        ws.cell(row=row, column=2, value=order.user.get_full_name() or order.user.email)
+        ws.cell(row=row, column=3, value=order.user.email)
+        ws.cell(row=row, column=4, value=order.created_at.strftime('%d.%m.%Y %H:%M'))
+        ws.cell(row=row, column=5, value=float(order.total_amount))
+        ws.cell(row=row, column=6, value=order.status.get_name_display())
+        ws.cell(row=row, column=7, value=order.delivery_address)
+
+        # Выравнивание
+        for col in range(1, 8):
+            ws.cell(row=row, column=col).alignment = Alignment(horizontal='left')
+
+    # Автоматическая ширина колонок
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column].width = adjusted_width
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="orders.xlsx"'
+
+    wb.save(response)
+    return response
+
+
+@user_passes_test(is_admin)
+def export_orders_csv_windows(request):
+    """Экспорт заказов в CSV для Windows (кодировка windows-1251)"""
+    response = HttpResponse(content_type='text/csv; charset=windows-1251')
+    response['Content-Disposition'] = 'attachment; filename="orders_win.csv"'
+
+    writer = csv.writer(response, delimiter=';', quoting=csv.QUOTE_MINIMAL)
+
+    # Заголовки
+    writer.writerow(['Номер заказа', 'Пользователь', 'Email', 'Дата', 'Сумма', 'Статус', 'Адрес'])
+
+    orders = Order.objects.select_related('user', 'status').all()
+    for order in orders:
+        writer.writerow([
+            order.order_number,
+            order.user.get_full_name() or order.user.email,
+            order.user.email,
+            order.created_at.strftime('%d.%m.%Y %H:%M'),
+            str(order.total_amount).replace('.', ','),
             order.status.get_name_display(),
             order.delivery_address
         ])

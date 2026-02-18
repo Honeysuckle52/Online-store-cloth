@@ -62,4 +62,11 @@ urlpatterns = [
     # Сброс пароля
     path('forgot-password/', views.forgot_password, name='forgot_password'),
     path('reset-password/<uuid:token>/', views.reset_password, name='reset_password'),
+
+    # Админ панель (изменено с /admin/dashboard/ на /dashboard/)
+    path('dashboard/', views.admin_dashboard, name='admin_dashboard'),
+    path('export/orders/', views.export_orders, name='export_orders'),
+    path('export/orders/utf8/', views.export_orders_utf8, name='export_orders_utf8'),
+    path('export/orders/excel/', views.export_orders_excel, name='export_orders_excel'),
+    path('export/orders/csv-windows/', views.export_orders_csv_windows, name='export_orders_csv_windows'),
 ]

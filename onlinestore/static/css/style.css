@@ -1982,20 +1982,17 @@ footer {
 }
 
 .footer-bottom {
-    text-align: center;
-    padding-top: 30px;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 20px;
+  text-align: center;
+  padding: 30px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .footer-bottom p {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .payment-methods {

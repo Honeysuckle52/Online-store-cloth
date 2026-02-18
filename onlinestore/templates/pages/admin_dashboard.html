@@ -6,100 +6,351 @@
 {% block content %}
 <div class="admin-dashboard">
     <div class="container" style="padding: 40px 5%;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <!-- Заголовок и кнопки экспорта -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 20px;">
             <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin: 0;">Панель управления</h1>
-            <a href="{% url 'export_orders' %}" class="btn-main">
-                <i class="bi bi-download" style="margin-right: 8px;"></i>Экспорт заказов
-            </a>
+
+            <!-- Выпадающее меню экспорта -->
+            <div class="dropdown" style="position: relative;">
+                <button class="btn-main" onclick="toggleExportMenu()" style="display: flex; align-items: center; gap: 10px; padding: 12px 25px; cursor: pointer; border: none;">
+                    <i class="bi bi-download"></i> Экспорт данных
+                    <i class="bi bi-chevron-down" style="font-size: 0.8rem;"></i>
+                </button>
+
+                <div id="exportMenu" class="dropdown-menu" style="display: none; position: absolute; right: 0; top: 55px; background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 8px 0; min-width: 280px; box-shadow: var(--shadow-lg); z-index: 1000;">
+                    <div style="padding: 8px 16px; background: var(--border-color); font-weight: 600; border-radius: 12px 12px 0 0;">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Форматы CSV
+                    </div>
+                    <a href="{% url 'export_orders' %}" class="dropdown-item" style="display: flex; align-items: center; gap: 10px; padding: 12px 20px; text-decoration: none; color: var(--text-primary); transition: var(--transition);">
+                        <i class="bi bi-file-earmark-spreadsheet" style="color: var(--accent-primary);"></i>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500;">CSV (обычный)</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Стандартный формат</div>
+                        </div>
+                    </a>
+                    <a href="{% url 'export_orders_utf8' %}" class="dropdown-item" style="display: flex; align-items: center; gap: 10px; padding: 12px 20px; text-decoration: none; color: var(--text-primary); transition: var(--transition);">
+                        <i class="bi bi-file-earmark-spreadsheet" style="color: var(--accent-primary);"></i>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500;">CSV (UTF-8 для Excel)</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">С поддержкой русского языка</div>
+                        </div>
+                    </a>
+                    <a href="{% url 'export_orders_csv_windows' %}" class="dropdown-item" style="display: flex; align-items: center; gap: 10px; padding: 12px 20px; text-decoration: none; color: var(--text-primary); transition: var(--transition);">
+                        <i class="bi bi-file-earmark-spreadsheet" style="color: var(--accent-primary);"></i>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500;">CSV (Windows-1251)</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Для старых версий Excel</div>
+                        </div>
+                    </a>
+
+                    <div style="height: 1px; background: var(--border-color); margin: 8px 0;"></div>
+
+                    <div style="padding: 8px 16px; background: var(--border-color); font-weight: 600;">
+                        <i class="bi bi-file-earmark-excel"></i> Формат Excel
+                    </div>
+                    <a href="{% url 'export_orders_excel' %}" class="dropdown-item" style="display: flex; align-items: center; gap: 10px; padding: 12px 20px; text-decoration: none; color: var(--text-primary); transition: var(--transition);">
+                        <i class="bi bi-file-earmark-excel" style="color: #28a745;"></i>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500;">Excel (XLSX)</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Рекомендуемый формат</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
         </div>
 
-        <!-- Статистика -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px;">
-            <div style="background: white; border-radius: 16px; padding: 25px; text-align: center; box-shadow: var(--shadow-sm);">
-                <i class="bi bi-people" style="font-size: 2.5rem; color: var(--accent-primary);"></i>
-                <h3 style="margin: 15px 0 5px;">{{ total_users }}</h3>
-                <p style="color: var(--text-secondary);">Пользователей</p>
+        <!-- Статистика (4 карточки) -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 25px; margin-bottom: 40px;">
+            <div style="background: white; border-radius: 20px; padding: 25px; text-align: center; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); transition: var(--transition);"
+                 onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='var(--shadow-lg)'"
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-md)'">
+                <div style="width: 60px; height: 60px; background: var(--accent-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <i class="bi bi-people" style="font-size: 2rem; color: white;"></i>
+                </div>
+                <h3 style="font-size: 2rem; margin: 10px 0 5px;">{{ total_users }}</h3>
+                <p style="color: var(--text-secondary); margin: 0;">Пользователей</p>
             </div>
 
-            <div style="background: white; border-radius: 16px; padding: 25px; text-align: center; box-shadow: var(--shadow-sm);">
-                <i class="bi bi-box" style="font-size: 2.5rem; color: var(--accent-primary);"></i>
-                <h3 style="margin: 15px 0 5px;">{{ total_products }}</h3>
-                <p style="color: var(--text-secondary);">Товаров</p>
+            <div style="background: white; border-radius: 20px; padding: 25px; text-align: center; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); transition: var(--transition);"
+                 onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='var(--shadow-lg)'"
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-md)'">
+                <div style="width: 60px; height: 60px; background: var(--accent-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <i class="bi bi-box" style="font-size: 2rem; color: white;"></i>
+                </div>
+                <h3 style="font-size: 2rem; margin: 10px 0 5px;">{{ total_products }}</h3>
+                <p style="color: var(--text-secondary); margin: 0;">Товаров</p>
             </div>
 
-            <div style="background: white; border-radius: 16px; padding: 25px; text-align: center; box-shadow: var(--shadow-sm);">
-                <i class="bi bi-cart" style="font-size: 2.5rem; color: var(--accent-primary);"></i>
-                <h3 style="margin: 15px 0 5px;">{{ total_orders }}</h3>
-                <p style="color: var(--text-secondary);">Заказов</p>
+            <div style="background: white; border-radius: 20px; padding: 25px; text-align: center; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); transition: var(--transition);"
+                 onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='var(--shadow-lg)'"
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-md)'">
+                <div style="width: 60px; height: 60px; background: var(--accent-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <i class="bi bi-cart" style="font-size: 2rem; color: white;"></i>
+                </div>
+                <h3 style="font-size: 2rem; margin: 10px 0 5px;">{{ total_orders }}</h3>
+                <p style="color: var(--text-secondary); margin: 0;">Заказов</p>
             </div>
 
-            <div style="background: white; border-radius: 16px; padding: 25px; text-align: center; box-shadow: var(--shadow-sm);">
-                <i class="bi bi-currency-ruble" style="font-size: 2.5rem; color: var(--accent-primary);"></i>
-                <h3 style="margin: 15px 0 5px;">{{ total_revenue }} ₽</h3>
-                <p style="color: var(--text-secondary);">Выручка</p>
+            <div style="background: white; border-radius: 20px; padding: 25px; text-align: center; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); transition: var(--transition);"
+                 onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='var(--shadow-lg)'"
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-md)'">
+                <div style="width: 60px; height: 60px; background: var(--accent-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <i class="bi bi-currency-ruble" style="font-size: 2rem; color: white;"></i>
+                </div>
+                <h3 style="font-size: 2rem; margin: 10px 0 5px;">{{ total_revenue|floatformat:0 }} ₽</h3>
+                <p style="color: var(--text-secondary); margin: 0;">Выручка</p>
             </div>
         </div>
 
-        <!-- Статистика за 30 дней -->
+        <!-- Статистика за 30 дней и статусы заказов -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px;">
-            <div style="background: white; border-radius: 16px; padding: 25px; box-shadow: var(--shadow-sm);">
-                <h3 style="margin-bottom: 20px;">За последние 30 дней</h3>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                    <span>Заказов:</span>
-                    <span style="font-weight: 600;">{{ recent_orders }}</span>
+            <!-- За последние 30 дней -->
+            <div style="background: white; border-radius: 20px; padding: 30px; box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
+                <h3 style="margin: 0 0 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="bi bi-calendar-week" style="color: var(--accent-primary);"></i>
+                    За последние 30 дней
+                </h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: var(--bg-primary); border-radius: 12px;">
+                    <div>
+                        <span style="color: var(--text-secondary);">Заказов:</span>
+                        <div style="font-size: 1.5rem; font-weight: 700;">{{ recent_orders }}</div>
+                    </div>
+                    <i class="bi bi-cart-check" style="font-size: 2rem; color: var(--accent-primary); opacity: 0.5;"></i>
                 </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Выручка:</span>
-                    <span style="font-weight: 600; color: var(--accent-primary);">{{ recent_revenue }} ₽</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--bg-primary); border-radius: 12px;">
+                    <div>
+                        <span style="color: var(--text-secondary);">Выручка:</span>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-primary);">{{ recent_revenue|floatformat:0 }} ₽</div>
+                    </div>
+                    <i class="bi bi-graph-up-arrow" style="font-size: 2rem; color: var(--accent-primary); opacity: 0.5;"></i>
                 </div>
             </div>
 
-            <div style="background: white; border-radius: 16px; padding: 25px; box-shadow: var(--shadow-sm);">
-                <h3 style="margin-bottom: 20px;">Статусы заказов</h3>
+            <!-- Статусы заказов -->
+            <div style="background: white; border-radius: 20px; padding: 30px; box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
+                <h3 style="margin: 0 0 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="bi bi-pie-chart" style="color: var(--accent-primary);"></i>
+                    Статусы заказов
+                </h3>
                 {% for status in order_statuses %}
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <span>{{ status.get_name_display }}</span>
-                    <span style="font-weight: 600;">{{ status.count }}</span>
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="color: var(--text-secondary);">{{ status.get_name_display }}</span>
+                        <span style="font-weight: 600;">{{ status.count }}</span>
+                    </div>
+                    <div style="height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden;">
+                        <div style="height: 100%; width: {% widthratio status.count total_orders 100 %}%; background:
+                            {% if status.name == 'created' %}#E9DBCB
+                            {% elif status.name == 'paid' %}#D4A373
+                            {% elif status.name == 'shipped' %}#8C7E72
+                            {% elif status.name == 'delivered' %}#4A3F35
+                            {% elif status.name == 'cancelled' %}#dc3545
+                            {% else %}var(--accent-primary){% endif %};"></div>
+                    </div>
                 </div>
+                {% empty %}
+                <p style="color: var(--text-secondary); text-align: center;">Нет данных о заказах</p>
                 {% endfor %}
             </div>
         </div>
 
         <!-- Топ товаров -->
-        <div style="background: white; border-radius: 16px; padding: 25px; box-shadow: var(--shadow-sm);">
-            <h3 style="margin-bottom: 20px;">Топ продаж</h3>
+        <div style="background: white; border-radius: 20px; padding: 30px; box-shadow: var(--shadow-md); border: 1px solid var(--border-color); margin-bottom: 40px;">
+            <h3 style="margin: 0 0 20px; display: flex; align-items: center; gap: 10px;">
+                <i class="bi bi-trophy" style="color: var(--accent-primary);"></i>
+                Топ продаж
+            </h3>
+
             <div style="display: grid; gap: 15px;">
                 {% for product in top_products %}
-                <div style="display: flex; align-items: center; gap: 15px; padding: 10px; border-bottom: 1px solid var(--border-color);">
-                    {% with main_image=product.get_main_image %}
-                        {% if main_image %}
-                            <img src="{{ main_image.image.url }}" alt="" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">
-                        {% else %}
-                            <div style="width: 50px; height: 50px; background: var(--border-color); border-radius: 8px;"></div>
-                        {% endif %}
-                    {% endwith %}
-                    <div style="flex: 1;">
-                        <p style="margin: 0; font-weight: 500;">{{ product.name }}</p>
-                        <p style="margin: 5px 0 0; color: var(--text-secondary); font-size: 0.9rem;">Продано: {{ product.order_count }}</p>
+                <div style="display: flex; align-items: center; gap: 20px; padding: 15px; background: var(--bg-primary); border-radius: 16px; transition: var(--transition);"
+                     onmouseover="this.style.transform='translateX(5px)'; this.style.boxShadow='var(--shadow-md)'"
+                     onmouseout="this.style.transform='translateX(0)'; this.style.boxShadow='none'">
+
+                    <!-- Изображение товара -->
+                    <div style="width: 70px; height: 70px; border-radius: 12px; overflow: hidden; background: white; border: 1px solid var(--border-color); flex-shrink: 0;">
+                        {% with main_image=product.get_main_image %}
+                            {% if main_image %}
+                                <img src="{{ main_image.image.url }}" alt="{{ product.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% else %}
+                                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--border-color);">
+                                    <i class="bi bi-image" style="color: var(--text-secondary);"></i>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
                     </div>
-                    <span style="font-weight: 600; color: var(--accent-primary);">{{ product.price }} ₽</span>
+
+                    <!-- Информация о товаре -->
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 5px; font-size: 1.1rem;">{{ product.name }}</h4>
+                        <div style="display: flex; gap: 20px; color: var(--text-secondary); font-size: 0.9rem;">
+                            <span><i class="bi bi-tag"></i> {{ product.price }} ₽</span>
+                            <span><i class="bi bi-cart"></i> Продано: {{ product.order_count|default:0 }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Рейтинг -->
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.2rem; font-weight: 700; color: var(--accent-primary);">#{{ forloop.counter }}</div>
+                        <div style="color: #ffc107; font-size: 0.9rem;">
+                            {% with rating=product.get_average_rating %}
+                                {% for i in "12345"|make_list %}
+                                    {% if forloop.counter <= rating %}
+                                        <i class="bi bi-star-fill"></i>
+                                    {% else %}
+                                        <i class="bi bi-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endwith %}
+                        </div>
+                    </div>
                 </div>
                 {% empty %}
-                <p style="color: var(--text-secondary); text-align: center;">Нет данных о продажах</p>
+                <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <i class="bi bi-inbox" style="font-size: 3rem; display: block; margin-bottom: 15px;"></i>
+                    <p>Нет данных о продажах</p>
+                </div>
                 {% endfor %}
             </div>
         </div>
 
         <!-- Быстрые ссылки -->
-        <div style="margin-top: 40px;">
-            <h3 style="margin-bottom: 20px;">Быстрые ссылки</h3>
+        <div style="background: linear-gradient(135deg, #F2EDE4 0%, #FAF9F6 100%); border-radius: 20px; padding: 30px;">
+            <h3 style="margin: 0 0 20px; display: flex; align-items: center; gap: 10px;">
+                <i class="bi bi-link-45deg" style="color: var(--accent-primary);"></i>
+                Быстрые ссылки
+            </h3>
+
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <a href="{% url 'manage_products' %}" class="btn-main">Управление товарами</a>
-                <a href="{% url 'manage_orders' %}" class="btn-outline">Управление заказами</a>
-                <a href="{% url 'moderate_reviews' %}" class="btn-outline">Модерация отзывов</a>
-                <a href="/admin/" class="btn-outline">Django Admin</a>
+                <a href="{% url 'manage_products' %}" class="btn-main" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 25px; text-decoration: none;">
+                    <i class="bi bi-grid"></i>
+                    Управление товарами
+                </a>
+                <a href="{% url 'manage_orders' %}" class="btn-outline" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 25px; text-decoration: none;">
+                    <i class="bi bi-truck"></i>
+                    Управление заказами
+                </a>
+                <a href="{% url 'moderate_reviews' %}" class="btn-outline" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 25px; text-decoration: none;">
+                    <i class="bi bi-chat"></i>
+                    Модерация отзывов
+                </a>
+                <a href="/admin/" class="btn-outline" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 25px; text-decoration: none;">
+                    <i class="bi bi-gear"></i>
+                    Django Admin
+                </a>
             </div>
+        </div>
+
+        <!-- Информация о экспорте -->
+        <div style="margin-top: 20px; padding: 15px; background: var(--bg-primary); border-radius: 12px; color: var(--text-secondary); font-size: 0.9rem; display: flex; align-items: center; gap: 10px;">
+            <i class="bi bi-info-circle" style="font-size: 1.2rem;"></i>
+            <span>Для экспорта в Excel рекомендуется использовать формат XLSX. Для CSV выберите UTF-8 для корректного отображения русского текста.</span>
         </div>
     </div>
 </div>
+
+<!-- Скрипт для выпадающего меню -->
+<script>
+function toggleExportMenu() {
+    const menu = document.getElementById('exportMenu');
+    if (menu) {
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// Закрыть меню при клике вне его
+document.addEventListener('click', function(event) {
+    const menu = document.getElementById('exportMenu');
+    const button = event.target.closest('.btn-main');
+
+    if (menu && !button && menu.style.display === 'block') {
+        menu.style.display = 'none';
+    }
+});
+
+// Закрыть меню при нажатии Escape
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const menu = document.getElementById('exportMenu');
+        if (menu) {
+            menu.style.display = 'none';
+        }
+    }
+});
+</script>
+
+<!-- Дополнительные стили -->
+<style>
+/* Стили для выпадающего меню */
+.dropdown-menu {
+    animation: fadeIn 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background: var(--border-color) !important;
+    color: var(--accent-primary) !important;
+}
+
+.dropdown-item i {
+    transition: var(--transition);
+}
+
+.dropdown-item:hover i {
+    transform: scale(1.1);
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .admin-dashboard .container > div:first-child {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dropdown {
+        width: 100%;
+    }
+
+    .btn-main {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .dropdown-menu {
+        width: 100%;
+        position: fixed !important;
+        top: auto !important;
+        bottom: 0;
+        left: 0 !important;
+        right: 0 !important;
+        border-radius: 20px 20px 0 0 !important;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .dropdown-item {
+        padding: 15px 20px !important;
+    }
+}
+
+/* Стили для карточек статистики */
+.bi {
+    transition: var(--transition);
+}
+
+[onmouseover]:hover .bi {
+    transform: scale(1.1);
+}
+</style>
 {% endblock %}

@@ -7,22 +7,9 @@
 {% block content %}
 <div class="catalog-page">
     <div class="container" style="padding: 40px 5%;">
-        <!-- Заголовок и поиск -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+        <!-- Заголовок -->
+        <div style="margin-bottom: 40px;">
             <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin: 0;">Каталог</h1>
-
-            <form method="get" style="display: flex; gap: 10px;">
-                <input type="text"
-                       name="q"
-                       placeholder="Поиск товаров..."
-                       value="{{ request.GET.q }}"
-                       style="padding: 12px 20px; border: 2px solid var(--border-color); border-radius: 50px; width: 300px; font-size: 1rem; transition: var(--transition);"
-                       onfocus="this.style.borderColor='var(--accent-primary)'; this.style.outline='none';"
-                       onblur="this.style.borderColor='var(--border-color)';">
-                <button type="submit" class="btn-main" style="padding: 12px 30px;">
-                    <i class="bi bi-search"></i>
-                </button>
-            </form>
         </div>
 
         <div style="display: flex; gap: 40px;">
