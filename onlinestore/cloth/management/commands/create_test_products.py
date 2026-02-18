@@ -1,7 +1,36 @@
 from django.core.management.base import BaseCommand
+from django.utils.text import slugify
 from ...models import Category, Product, ProductVariant, Size, Color
 from decimal import Decimal
 import random
+import re
+
+# Таблица транслитерации кириллицы
+TRANSLIT_MAP = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+    'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+    'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+}
+
+
+def cyrillic_slugify(text):
+    """Транслитерация кириллицы и генерация slug"""
+    text = text.lower().strip()
+    result = []
+    for char in text:
+        if char in TRANSLIT_MAP:
+            result.append(TRANSLIT_MAP[char])
+        elif char.isascii() and (char.isalnum() or char in (' ', '-')):
+            result.append(char)
+        elif char == ' ':
+            result.append('-')
+        else:
+            result.append('')
+    slug = ''.join(result)
+    slug = re.sub(r'-+', '-', slug).strip('-')
+    return slug
 
 
 class Command(BaseCommand):
@@ -149,9 +178,18 @@ class Command(BaseCommand):
                         continue
 
                     try:
+                        # Генерируем уникальный slug с транслитерацией
+                        base_slug = cyrillic_slugify(product_name)
+                        slug = base_slug
+                        counter = 1
+                        while Product.objects.filter(slug=slug).exists():
+                            slug = f'{base_slug}-{counter}'
+                            counter += 1
+
                         product = Product.objects.create(
                             category=category,
                             name=product_name,
+                            slug=slug,
                             description=template['description'],
                             price=Decimal(template['price']),
                             material=template.get('material', 'Натуральные материалы'),

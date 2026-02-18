@@ -435,7 +435,21 @@ def checkout(request):
                 comment=form.cleaned_data.get('comment', '')
             )
 
-            # Переносим товары из корзины
+            # Проверяем наличие на складе перед оформлением
+            out_of_stock = []
+            for cart_item in cart.items.select_related('variant__product').all():
+                if cart_item.variant.stock_quantity < cart_item.quantity:
+                    out_of_stock.append(
+                        f"{cart_item.variant.product.name} (доступно: {cart_item.variant.stock_quantity} шт.)"
+                    )
+
+            if out_of_stock:
+                order.delete()
+                for item_name in out_of_stock:
+                    messages.error(request, f'Недостаточно товара: {item_name}')
+                return redirect('cart')
+
+            # Переносим товары из корзины в заказ (склад НЕ трогаем пока)
             for cart_item in cart.items.select_related('variant__product').all():
                 order.items.create(
                     variant=cart_item.variant,
@@ -443,24 +457,28 @@ def checkout(request):
                     price_per_unit=cart_item.variant.price
                 )
 
-                # Уменьшаем количество на складе
-                variant = cart_item.variant
-                variant.stock_quantity -= cart_item.quantity
-                variant.save()
-
-            # Очищаем корзину
-            cart.items.all().delete()
-
             logger.info(f"Order created: {order.order_number} by user {request.user.id}")
 
             # Выбираем способ оплаты
             payment_method = request.POST.get('payment_method', 'yookassa')
 
             if payment_method == 'yookassa':
-                # Перенаправляем на онлайн-оплату
+                # Онлайн-оплата -- корзину НЕ очищаем, склад НЕ уменьшаем
+                # Это произойдет только после подтверждения оплаты
+                order.payment_method = 'yookassa'
+                order.save()
                 return redirect('payment', order_id=order.id)
             else:
-                # Оплата при получении - статус "confirmed" (подтвержден, ожидает оплаты)
+                # Оплата при получении -- списываем со склада и очищаем корзину сразу
+                for order_item in order.items.select_related('variant').all():
+                    variant = order_item.variant
+                    variant.stock_quantity -= order_item.quantity
+                    if variant.stock_quantity < 0:
+                        variant.stock_quantity = 0
+                    variant.save()
+
+                cart.items.all().delete()
+
                 status_confirmed, _ = OrderStatus.objects.get_or_create(
                     name='confirmed',
                     defaults={'name': 'confirmed'}

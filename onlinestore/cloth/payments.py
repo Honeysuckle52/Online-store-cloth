@@ -292,7 +292,24 @@ class PaymentService:
             status_paid, _ = OrderStatus.objects.get_or_create(name='paid')
             order = transaction.order
             order.status = status_paid
+            order.payment_method = 'yookassa'
             order.save()
+
+            # Списываем товары со склада
+            for order_item in order.items.select_related('variant').all():
+                variant = order_item.variant
+                variant.stock_quantity -= order_item.quantity
+                if variant.stock_quantity < 0:
+                    variant.stock_quantity = 0
+                variant.save()
+
+            # Очищаем корзину пользователя
+            from .models import Cart
+            try:
+                cart = Cart.objects.get(user=order.user)
+                cart.items.all().delete()
+            except Cart.DoesNotExist:
+                pass
 
             logger.info(f"Payment {payment_id} succeeded for order {order.order_number}")
 
@@ -305,7 +322,8 @@ class PaymentService:
 
     def handle_failed_payment(self, payment_id):
         """
-        Обработка неуспешного платежа
+        Обработка неуспешного платежа -- склад НЕ трогаем (он не был списан),
+        корзину НЕ трогаем (она не была очищена), просто помечаем заказ как отмененный.
 
         Args:
             payment_id: ID платежа в ЮKassa
@@ -324,7 +342,13 @@ class PaymentService:
         transaction.status = status_failed
         transaction.save()
 
-        logger.info(f"Payment {payment_id} failed for order {transaction.order.order_number}")
+        # Помечаем заказ как отмененный
+        status_cancelled, _ = OrderStatus.objects.get_or_create(name='cancelled')
+        order = transaction.order
+        order.status = status_cancelled
+        order.save()
+
+        logger.info(f"Payment {payment_id} failed for order {order.order_number}, order cancelled")
 
         return transaction
 
