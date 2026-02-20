@@ -1,0 +1,520 @@
+from django.core.management.base import BaseCommand
+from django.core.files import File
+from django.conf import settings
+from django.utils import timezone
+from django.contrib.auth import get_user_model
+from ...models import (
+    Product, Category, Size, Color, Gender,
+    ProductVariant, ProductImage, Role, OrderStatus,
+    TransactionStatus, DeliveryMethod, Order, OrderItem,
+    Cart, CartItem, Wishlist, Transaction
+)
+from decimal import Decimal
+import os
+import random
+import re
+
+User = get_user_model()
+
+# Таблица транслитерации кириллицы
+TRANSLIT_MAP = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+    'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+    'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+}
+
+
+def cyrillic_slugify(text):
+    """Транслитерация кириллицы и генерация slug"""
+    text = text.lower().strip()
+    result = []
+    for char in text:
+        if char in TRANSLIT_MAP:
+            result.append(TRANSLIT_MAP[char])
+        elif char.isascii() and char.isalnum():
+            result.append(char)
+        elif char == ' ':
+            result.append('-')
+        else:
+            result.append('')
+    slug = ''.join(result)
+    slug = re.sub(r'-+', '-', slug)
+    slug = slug.strip('-')
+    return slug
+
+
+class Command(BaseCommand):
+    help = 'Создание 2 товаров на каждую категорию с полноценными описаниями'
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Принудительное удаление всех товаров без подтверждения',
+        )
+
+    def handle(self, *args, **options):
+        self.stdout.write(self.style.WARNING('\n' + '=' * 60))
+        self.stdout.write(self.style.WARNING('СОЗДАНИЕ ТОВАРОВ (2 НА КАТЕГОРИЮ)'))
+        self.stdout.write(self.style.WARNING('=' * 60 + '\n'))
+
+        # Запрос подтверждения
+        if not options['force']:
+            confirm = input('Все существующие товары, заказы и корзины будут УДАЛЕНЫ! Продолжить? (y/N): ')
+            if confirm.lower() != 'y':
+                self.stdout.write(self.style.WARNING('Операция отменена'))
+                return
+
+        # 1. Инициализация базовых данных
+        self.init_base_data()
+
+        # 2. Удаление старых товаров и связанных данных
+        self.delete_old_products()
+
+        # 3. Создание новых товаров (по 2 на категорию)
+        self.create_new_products()
+
+        # 4. Исправление slug'ов
+        self.fix_all_slugs()
+
+        self.stdout.write(self.style.SUCCESS('\n' + '=' * 60))
+        self.stdout.write(self.style.SUCCESS('✅ ГОТОВО! СОЗДАНО 2 ТОВАРА НА КАТЕГОРИЮ'))
+        self.stdout.write(self.style.SUCCESS('=' * 60 + '\n'))
+
+    def init_base_data(self):
+        """Инициализация базовых данных (роли, статусы, размеры, цвета)"""
+        self.stdout.write('\n📦 Инициализация базовых данных...')
+
+        # Роли
+        roles = ['user', 'moderator', 'admin']
+        for role_name in roles:
+            role, created = Role.objects.get_or_create(name=role_name)
+            self.stdout.write(f'  {"✓" if not created else "+"} Роль: {role_name}')
+
+        # Статусы заказов
+        statuses = ['created', 'paid', 'shipped', 'delivered', 'cancelled']
+        for status_name in statuses:
+            status, created = OrderStatus.objects.get_or_create(name=status_name)
+            self.stdout.write(f'  {"✓" if not created else "+"} Статус заказа: {status_name}')
+
+        # Статусы транзакций
+        tx_statuses = ['pending', 'succeeded', 'failed', 'refunded']
+        for status_name in tx_statuses:
+            status, created = TransactionStatus.objects.get_or_create(name=status_name)
+            self.stdout.write(f'  {"✓" if not created else "+"} Статус транзакции: {status_name}')
+
+        # Способы доставки
+        DeliveryMethod.objects.get_or_create(name='courier', defaults={'price': 300})
+        DeliveryMethod.objects.get_or_create(name='pickup', defaults={'price': 0})
+        self.stdout.write('  ✓ Способы доставки')
+
+        # Пол
+        genders = ['men', 'women', 'unisex', 'kids']
+        for gender_name in genders:
+            gender, created = Gender.objects.get_or_create(name=gender_name)
+            self.stdout.write(f'  {"✓" if not created else "+"} Пол: {gender_name}')
+
+        # Размеры (только буквенные)
+        letter_sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+        for i, size_name in enumerate(letter_sizes):
+            size, created = Size.objects.get_or_create(
+                name=size_name,
+                defaults={'order': i}
+            )
+            self.stdout.write(f'  {"✓" if not created else "+"} Размер: {size_name}')
+
+        # Цвета
+        colors = [
+            {'name': 'Черный', 'hex': '#000000'},
+            {'name': 'Белый', 'hex': '#FFFFFF'},
+            {'name': 'Серый', 'hex': '#808080'},
+            {'name': 'Бежевый', 'hex': '#F5F5DC'},
+            {'name': 'Синий', 'hex': '#0000FF'},
+            {'name': 'Красный', 'hex': '#FF0000'},
+            {'name': 'Зеленый', 'hex': '#008000'},
+        ]
+        for color in colors:
+            col, created = Color.objects.get_or_create(
+                name=color['name'],
+                defaults={'hex_code': color['hex']}
+            )
+            self.stdout.write(f'  {"✓" if not created else "+"} Цвет: {color["name"]}')
+
+        # Категории
+        categories = [
+            {'name': 'Верхняя одежда', 'slug': 'outerwear'},
+            {'name': 'Платья', 'slug': 'dresses'},
+            {'name': 'Рубашки', 'slug': 'shirts'},
+            {'name': 'Брюки', 'slug': 'pants'},
+            {'name': 'Юбки', 'slug': 'skirts'},
+            {'name': 'Джинсы', 'slug': 'jeans'},
+            {'name': 'Футболки', 'slug': 't-shirts'},
+            {'name': 'Свитеры', 'slug': 'sweaters'},
+            {'name': 'Аксессуары', 'slug': 'accessories'},
+        ]
+        for cat in categories:
+            category, created = Category.objects.get_or_create(
+                slug=cat['slug'],
+                defaults={'name': cat['name']}
+            )
+            self.stdout.write(f'  {"✓" if not created else "+"} Категория: {cat["name"]}')
+
+        # Суперпользователь
+        if not User.objects.filter(email='admin@clothstore.ru').exists():
+            admin_role = Role.objects.get(name='admin')
+            User.objects.create_superuser(
+                email='admin@clothstore.ru',
+                password='admin123',
+                first_name='Admin',
+                last_name='Admin'
+            )
+            self.stdout.write('  + Суперпользователь: admin@clothstore.ru / admin123')
+
+    def delete_old_products(self):
+        """Удаление всех старых товаров и связанных данных"""
+        self.stdout.write('\n🗑️ Удаление старых товаров...')
+
+        # Удаляем транзакции
+        transaction_count = Transaction.objects.count()
+        Transaction.objects.all().delete()
+        self.stdout.write(f'    Удалено транзакций: {transaction_count}')
+
+        # Удаляем элементы заказов
+        orderitem_count = OrderItem.objects.count()
+        OrderItem.objects.all().delete()
+        self.stdout.write(f'    Удалено позиций заказов: {orderitem_count}')
+
+        # Удаляем заказы
+        order_count = Order.objects.count()
+        Order.objects.all().delete()
+        self.stdout.write(f'    Удалено заказов: {order_count}')
+
+        # Удаляем корзины
+        cart_count = Cart.objects.count()
+        Cart.objects.all().delete()
+        self.stdout.write(f'    Удалено корзин: {cart_count}')
+
+        # Удаляем избранное
+        wishlist_count = Wishlist.objects.count()
+        Wishlist.objects.all().delete()
+        self.stdout.write(f'    Удалено избранного: {wishlist_count}')
+
+        # Удаляем варианты товаров
+        variant_count = ProductVariant.objects.count()
+        ProductVariant.objects.all().delete()
+        self.stdout.write(f'  Удалено вариантов товаров: {variant_count}')
+
+        # Удаляем товары
+        product_count = Product.objects.count()
+        Product.objects.all().delete()
+        self.stdout.write(f'  Удалено товаров: {product_count}')
+
+        # Удаляем изображения товаров из БД
+        image_count = ProductImage.objects.count()
+        ProductImage.objects.all().delete()
+        self.stdout.write(f'  Удалено записей изображений: {image_count}')
+
+        # Удаляем изображения из файловой системы
+        media_path = settings.MEDIA_ROOT / 'products'
+        file_count = 0
+        if media_path.exists():
+            for file in media_path.glob('*'):
+                if file.is_file() and file.name not in ['djins.png', 'futbolka.png']:
+                    file.unlink()
+                    file_count += 1
+        self.stdout.write(f'  Удалено файлов изображений: {file_count}')
+
+    def create_new_products(self):
+        """Создание новых товаров (ровно 2 на категорию)"""
+        self.stdout.write('\n✨ Создание новых товаров (2 на категорию)...')
+
+        categories = Category.objects.all()
+        sizes = Size.objects.all()
+        colors = Color.objects.all()
+        color_list = list(colors)
+
+        # Проверяем наличие изображений
+        media_path = settings.MEDIA_ROOT / 'products'
+        default_images = ['djins.png', 'futbolka.png']
+
+        created_count = 0
+
+        # Шаблоны товаров для каждой категории с ПОЛНОЦЕННЫМИ описаниями
+        product_templates = {
+            'jeans': [
+                {
+                    'name': 'Классические джинсы',
+                    'price': 3990,
+                    'image': 'djins.png',
+                    'description': 'Классические джинсы прямого кроя из высококачественного денима. Идеально подходят для повседневной носки. Материал: 98% хлопок, 2% эластан обеспечивает комфорт и свободу движений. Усиленные швы и качественная фурнитура гарантируют долговечность.',
+                    'material': '98% хлопок, 2% эластан'
+                },
+                {
+                    'name': 'Джинсы с высокой талией',
+                    'price': 4590,
+                    'image': 'djins.png',
+                    'description': 'Модные джинсы с высокой талией, подчеркивающие фигуру. Эластичный материал обеспечивает идеальную посадку и комфорт в течение всего дня. Завышенная талия визуально удлиняет ноги и создает стильный силуэт.',
+                    'material': '98% хлопок, 2% эластан'
+                },
+            ],
+            't-shirts': [
+                {
+                    'name': 'Базовая футболка',
+                    'price': 1490,
+                    'image': 'futbolka.png',
+                    'description': 'Базовая хлопковая футболка - must-have в гардеробе. Мягкая, дышащая, идеально подходит для повседневной носки. Классический крой, укрепленные швы, не теряет форму после стирки. Состав: 100% хлопок высокого качества.',
+                    'material': '100% хлопок'
+                },
+                {
+                    'name': 'Оверсайз футболка',
+                    'price': 1890,
+                    'image': 'futbolka.png',
+                    'description': 'Модная футболка свободного кроя оверсайз. Подходит для создания стильных образов - можно носить с леггинсами, джинсами или шортами. Мягкий хлопок приятен к телу, свободный крой не сковывает движения.',
+                    'material': '100% хлопок'
+                },
+            ],
+            'dresses': [
+                {
+                    'name': 'Летнее платье',
+                    'price': 3500,
+                    'image': 'futbolka.png',
+                    'description': 'Легкое летнее платье из натуральной вискозы. Идеально для жаркой погоды - материал дышит и не вызывает раздражения. Свободный крой, приятная текстура, красиво драпируется. Длина миди подходит для любого случая.',
+                    'material': '100% вискоза'
+                },
+                {
+                    'name': 'Платье-рубашка',
+                    'price': 4200,
+                    'image': 'futbolka.png',
+                    'description': 'Универсальное платье-рубашка на каждый день. Подходит для офиса, прогулок и встреч с друзьями. Классический воротник, удобные манжеты, пояс подчеркивает талию. Можно носить как самостоятельную вещь или как легкое пальто.',
+                    'material': '100% хлопок'
+                },
+            ],
+            'outerwear': [
+                {
+                    'name': 'Джинсовая куртка',
+                    'price': 6500,
+                    'image': 'djins.png',
+                    'description': 'Стильная джинсовая куртка универсального стиля. Подходит для межсезонья - можно носить с футболками, платьями, свитерами. Классический синий цвет, металлические пуговицы, накладные карманы. Со временем становится только лучше.',
+                    'material': '100% хлопок деним'
+                },
+                {
+                    'name': 'Легкая ветровка',
+                    'price': 5200,
+                    'image': 'futbolka.png',
+                    'description': 'Легкая непродуваемая ветровка для прохладной погоды. Компактно складывается и не занимает много места в сумке. Водоотталкивающая пропитка защитит от легкого дождя. Регулируемый капюшон и манжеты.',
+                    'material': '100% полиэстер'
+                },
+            ],
+            'sweaters': [
+                {
+                    'name': 'Вязаный свитер',
+                    'price': 5500,
+                    'image': 'futbolka.png',
+                    'description': 'Теплый вязаный свитер для холодной погоды. Мягкий и комфортный, не колется и не вызывает раздражения. Крупная вязка выглядит стильно и современно. Высокий воротник защищает от ветра. Подходит для повседневной носки.',
+                    'material': '50% шерсть, 50% акрил'
+                },
+                {
+                    'name': 'Тонкий джемпер',
+                    'price': 3800,
+                    'image': 'futbolka.png',
+                    'description': 'Легкий джемпер из премиальной шерсти. Подходит для офиса и повседневной носки. Тонкая вязка позволяет носить его под пиджак или пальто. Мягкий, приятный на ощупь, сохраняет тепло даже в холодную погоду.',
+                    'material': '100% мериносовая шерсть'
+                },
+            ],
+            'shirts': [
+                {
+                    'name': 'Классическая рубашка',
+                    'price': 3500,
+                    'image': 'futbolka.png',
+                    'description': 'Элегантная классическая рубашка для офиса и деловых встреч. Идеально сидит по фигуре, не мнется благодаря качественному хлопку. Отличный выбор для создания строгого образа.',
+                    'material': '100% хлопок'
+                },
+                {
+                    'name': 'Льняная рубашка',
+                    'price': 4200,
+                    'image': 'futbolka.png',
+                    'description': 'Легкая летняя рубашка из натурального льна. Отлично пропускает воздух и не перегревается в жару. Свободный крой не сковывает движения. Со временем становится только мягче и приятнее к телу.',
+                    'material': '100% лен'
+                },
+            ],
+            'pants': [
+                {
+                    'name': 'Классические брюки',
+                    'price': 4800,
+                    'image': 'djins.png',
+                    'description': 'Элегантные брюки для офиса. Не мнутся, хорошо держат форму благодаря качественному материалу. Классический крой, стрелки, застежка на молнию и пуговицу. Подходят для создания делового образа.',
+                    'material': '70% полиэстер, 30% вискоза'
+                },
+                {
+                    'name': 'Чиносы',
+                    'price': 3900,
+                    'image': 'djins.png',
+                    'description': 'Удобные повседневные чиносы с эластаном для комфорта. Мягкие, приятные на ощупь, не сковывают движения. Подходят для прогулок, встреч с друзьями, поездок. Сочетаются с футболками, рубашками, свитерами.',
+                    'material': '98% хлопок, 2% эластан'
+                },
+            ],
+            'skirts': [
+                {
+                    'name': 'Юбка-карандаш',
+                    'price': 3200,
+                    'image': 'futbolka.png',
+                    'description': 'Классическая юбка-карандаш для офиса. Строгий и элегантный силуэт подчеркивает фигуру. Длина до колена, разрез сзади для удобства. Сочетается с блузами, рубашками и тонкими свитерами.',
+                    'material': '70% полиэстер, 30% вискоза'
+                },
+                {
+                    'name': 'Юбка плиссе',
+                    'price': 2800,
+                    'image': 'futbolka.png',
+                    'description': 'Модная юбка плиссе. Легкая и воздушная, подходит для повседневной носки и особых случаев. Мягкие складки красиво двигаются при ходьбе. Длина миди, на поясе резинка для комфортной посадки.',
+                    'material': '100% полиэстер'
+                },
+            ],
+            'accessories': [
+                {
+                    'name': 'Шарф',
+                    'price': 1200,
+                    'image': 'futbolka.png',
+                    'description': 'Теплый уютный шарф для холодной погоды. Мягкий и приятный на ощупь, не колется. Длинный, можно носить разными способами. Подходит к любому верхней одежде - пальто, пуховику, куртке.',
+                    'material': '100% акрил'
+                },
+                {
+                    'name': 'Шапка',
+                    'price': 1500,
+                    'image': 'futbolka.png',
+                    'description': 'Стильная вязаная шапка. Подходит для холодного времени года - хорошо сохраняет тепло. Мягкая, не растягивается, держит форму. Универсальный дизайн подходит как мужчинам, так и женщинам.',
+                    'material': '100% акрил'
+                },
+            ],
+        }
+
+        for category in categories:
+            self.stdout.write(f'\n📁 Категория: {category.name}')
+
+            if category.slug in product_templates:
+                templates = product_templates[category.slug]
+            else:
+                # Универсальные товары для остальных категорий
+                templates = [
+                    {
+                        'name': f'{category.name} (базовая модель)',
+                        'price': 3000,
+                        'image': random.choice(default_images),
+                        'description': f'Качественное изделие категории {category.name}. Подходит для повседневной носки. Изготовлено из натуральных материалов, приятных на ощупь. Классический крой, удобная посадка, не теряет форму после стирки.',
+                        'material': 'Натуральные материалы'
+                    },
+                    {
+                        'name': f'{category.name} (премиум)',
+                        'price': 4500,
+                        'image': random.choice(default_images),
+                        'description': f'Премиальное изделие категории {category.name}. Отличное качество и стиль. Использованы лучшие материалы и фурнитура. Усиленные швы, идеальная посадка по фигуре, долговечность.',
+                        'material': 'Премиум материалы'
+                    },
+                ]
+
+            for template in templates:
+                # Выбираем случайный цвет для каждого товара
+                random_color = random.choice(color_list)
+
+                product_name = template['name']
+
+                # Проверяем, существует ли уже такой товар
+                if Product.objects.filter(name=product_name, category=category).exists():
+                    self.stdout.write(f'  - Пропускаем (уже есть): {product_name}')
+                    continue
+
+                try:
+                    # Генерируем уникальный slug
+                    base_slug = cyrillic_slugify(product_name)
+                    base_slug = base_slug.replace(' ', '-')
+                    base_slug = re.sub(r'-+', '-', base_slug)
+
+                    slug = base_slug
+                    counter = 1
+                    while Product.objects.filter(slug=slug).exists():
+                        slug = f'{base_slug}-{counter}'
+                        counter += 1
+
+                    # Создаем товар с ПОЛНОЦЕННЫМ описанием
+                    product = Product.objects.create(
+                        category=category,
+                        name=product_name,
+                        slug=slug,
+                        description=template['description'],
+                        price=Decimal(template['price']),
+                        material=template['material'],
+                        care_instructions='Стирка при 30°C, не отбеливать, гладить при средней температуре',
+                        is_active=True,
+                        is_new=True,
+                    )
+
+                    # Добавляем изображение (если есть)
+                    image_path = media_path / template['image']
+                    if image_path.exists():
+                        with open(image_path, 'rb') as f:
+                            ProductImage.objects.create(
+                                product=product,
+                                image=File(f, name=template['image']),
+                                is_main=True
+                            )
+
+                    # Создаем варианты для разных размеров с выбранным цветом
+                    variant_count = 0
+                    for size in sizes:
+                        # Случайное количество на складе
+                        stock = random.randint(5, 20)
+
+                        # Небольшая вариация цены в зависимости от размера
+                        price_variation = Decimal(random.randint(-200, 300))
+                        variant_price = Decimal(template['price']) + price_variation
+
+                        ProductVariant.objects.create(
+                            product=product,
+                            size=size,
+                            color=random_color,
+                            price=max(Decimal('100'), round(variant_price, -1)),
+                            stock_quantity=stock
+                        )
+                        variant_count += 1
+
+                    created_count += 1
+                    self.stdout.write(self.style.SUCCESS(
+                        f'  ✓ {product_name} (цвет: {random_color.name}) - {variant_count} размеров'))
+
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f'  ✗ Ошибка: {product_name} - {str(e)}'))
+
+        self.stdout.write(self.style.SUCCESS(f'\n✅ Создано новых товаров: {created_count}'))
+
+    def fix_all_slugs(self):
+        """Исправление всех slug'ов"""
+        self.stdout.write('\n🔧 Исправление slug\'ов товаров...')
+
+        fixed_count = 0
+        for product in Product.objects.all():
+            old_slug = product.slug
+            new_slug = old_slug.replace(' ', '-')
+            new_slug = re.sub(r'[^a-zA-Z0-9_-]', '', new_slug)
+            new_slug = re.sub(r'-+', '-', new_slug)
+            new_slug = new_slug.strip('-')
+
+            if not new_slug:
+                new_slug = cyrillic_slugify(product.name)
+
+            if new_slug != old_slug:
+                base_slug = new_slug
+                counter = 1
+                while Product.objects.filter(slug=new_slug).exclude(id=product.id).exists():
+                    new_slug = f"{base_slug}-{counter}"
+                    counter += 1
+
+                product.slug = new_slug
+                product.save()
+                self.stdout.write(f'  {old_slug} -> {new_slug}')
+                fixed_count += 1
+
+        if fixed_count:
+            self.stdout.write(self.style.SUCCESS(f'  Исправлено slug\'ов: {fixed_count}'))
+        else:
+            self.stdout.write('  Все slug\'и корректны')

@@ -88,23 +88,45 @@
                 </div>
                 {% endif %}
 
+                <!-- Отображение цвета (фиксированный, без выбора) -->
+                {% with first_variant=variants.first %}
+                    {% if first_variant and first_variant.color %}
+                    <div style="margin-bottom: 25px;">
+                        <p style="font-weight: 600; margin-bottom: 10px;">Цвет:</p>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 35px; height: 35px; border-radius: 50%;
+                                        background: {{ first_variant.color.hex_code }};
+                                        border: 2px solid var(--border-color);
+                                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            </div>
+                            <span style="font-size: 1.1rem; color: var(--text-primary);">{{ first_variant.color.name }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endwith %}
+
                 <!-- Размеры -->
                 {% if variants %}
                 <div style="margin-bottom: 25px;">
                     <p style="font-weight: 600; margin-bottom: 10px;">Выберите размер:</p>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;" id="sizeButtons">
                         {% for variant in variants %}
-                        <button class="size-btn {% if not variant.in_stock %}out-of-stock{% endif %}"
-                                data-variant-id="{{ variant.id }}"
-                                data-price="{{ variant.price }}"
-                                onclick="selectVariant(this, {{ variant.id }}, {{ variant.price }})"
-                                style="padding: 10px 20px; border: 2px solid var(--border-color); background: white; border-radius: 10px; cursor: {% if variant.in_stock %}pointer{% else %}not-allowed{% endif %}; opacity: {% if variant.in_stock %}1{% else %}0.5{% endif %};">
-                            {{ variant.size.name }}
-                        </button>
+                            {% if variant.size %}
+                            <button class="size-btn {% if not variant.in_stock %}out-of-stock{% endif %}"
+                                    data-variant-id="{{ variant.id }}"
+                                    data-price="{{ variant.price }}"
+                                    onclick="selectSize(this, {{ variant.id }}, {{ variant.price }})"
+                                    style="padding: 10px 20px; border: 2px solid var(--border-color); background: white; border-radius: 10px; cursor: {% if variant.in_stock %}pointer{% else %}not-allowed{% endif %}; opacity: {% if variant.in_stock %}1{% else %}0.5{% endif %};">
+                                {{ variant.size.name }}
+                            </button>
+                            {% endif %}
                         {% endfor %}
                     </div>
                 </div>
                 {% endif %}
+
+                <!-- Скрытое поле для выбранного варианта -->
+                <input type="hidden" id="selectedVariantId" value="{{ variants.first.id }}">
 
                 <!-- Кнопки действий -->
                 <div style="display: flex; gap: 15px;">
@@ -228,8 +250,18 @@
 let selectedVariantId = '{{ variants.first.id }}';
 let selectedPrice = '{{ product.price }}';
 
-function selectVariant(button, variantId, price) {
-    // Убираем активный класс у всех кнопок
+// Инициализация: выделяем первый размер
+document.addEventListener('DOMContentLoaded', function() {
+    const firstSize = document.querySelector('.size-btn');
+    if (firstSize && !firstSize.classList.contains('out-of-stock')) {
+        firstSize.style.background = 'var(--text-primary)';
+        firstSize.style.color = 'white';
+        firstSize.style.borderColor = 'var(--text-primary)';
+    }
+});
+
+function selectSize(button, variantId, price) {
+    // Убираем активный класс у всех кнопок размера
     document.querySelectorAll('.size-btn').forEach(btn => {
         btn.style.background = 'white';
         btn.style.color = 'var(--text-primary)';
@@ -347,6 +379,17 @@ function showNotification(message, type) {
         transform: translateX(100%);
         opacity: 0;
     }
+}
+
+.size-btn {
+    transition: all 0.2s ease;
+    min-width: 50px;
+}
+
+.size-btn:hover:not(.out-of-stock) {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+    border-color: var(--accent-primary) !important;
 }
 </style>
 {% endblock %}

@@ -34,7 +34,17 @@
                 </div>
                 <div>
                     <p style="color: var(--text-secondary); margin-bottom: 5px;">Способ оплаты</p>
-                    <p style="font-weight: 500;">ЮKassa</p>
+                    <p style="font-weight: 500;">
+                        {% if order.payment_method == 'yookassa' %}
+                            <i class="bi bi-credit-card" style="margin-right: 5px; color: var(--accent-primary);"></i>
+                            ЮKassa (Онлайн)
+                        {% elif order.payment_method == 'cash' %}
+                            <i class="bi bi-cash" style="margin-right: 5px; color: var(--accent-primary);"></i>
+                            Наличные при получении
+                        {% else %}
+                            {{ order.get_payment_method_display|default:"Не указан" }}
+                        {% endif %}
+                    </p>
                 </div>
                 <div>
                     <p style="color: var(--text-secondary); margin-bottom: 5px;">Адрес доставки</p>
@@ -114,25 +124,25 @@
             </div>
             {% endif %}
 
-            {% if order.status.name == 'created' %}
+            {% if order.status.name == 'created' and order.payment_method == 'yookassa' %}
             <div style="margin-top: 30px; text-align: center;">
                 <a href="{% url 'payment' order.id %}" class="btn-main" style="padding: 15px 50px; font-size: 1.1rem;">
                     <i class="bi bi-wallet2" style="margin-right: 10px;"></i>Перейти к оплате
                 </a>
+                <p style="margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem;">
+                    Оплата через ЮKassa. Мы принимаем карты Visa, MasterCard, МИР
+                </p>
+            </div>
+            {% elif order.status.name == 'created' and order.payment_method == 'cash' %}
+            <div style="margin-top: 30px; padding: 20px; background: #F2EDE4; border-radius: 12px; text-align: center;">
+                <i class="bi bi-cash" style="font-size: 2rem; color: var(--accent-primary);"></i>
+                <p style="margin: 10px 0 0; font-weight: 500;">Оплата наличными при получении</p>
+                <p style="margin: 5px 0 0; color: var(--text-secondary); font-size: 0.9rem;">
+                    Вы сможете оплатить заказ наличными курьеру или в пункте самовывоза
+                </p>
             </div>
             {% endif %}
         </div>
     </div>
 </div>
 {% endblock %}
-
-{% if order.status.name == 'created' and not order.transactions.exists %}
-<div style="margin-top: 30px; text-align: center;">
-    <a href="{% url 'payment' order.id %}" class="btn-main" style="padding: 15px 50px; font-size: 1.1rem;">
-        <i class="bi bi-wallet2" style="margin-right: 8px;"></i>Оплатить заказ
-    </a>
-    <p style="margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem;">
-        Оплата через ЮKassa. Мы принимаем карты Visa, MasterCard, МИР
-    </p>
-</div>
-{% endif %}

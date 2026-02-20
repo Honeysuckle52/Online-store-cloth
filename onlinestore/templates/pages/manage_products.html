@@ -6,31 +6,46 @@
 {% block content %}
 <div class="manage-products-page">
     <div class="container" style="padding: 40px 5%;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 20px;">
             <h1 style="font-family: 'Playfair Display'; font-size: 2.5rem; margin: 0;">Управление товарами</h1>
             <a href="{% url 'add_product' %}" class="btn-main">
                 <i class="bi bi-plus-lg" style="margin-right: 8px;"></i>Добавить товар
             </a>
         </div>
-        
-        <!-- Фильтр по категориям -->
+
+        <!-- Уведомления -->
+        {% if messages %}
+        <div style="margin-bottom: 20px;">
+            {% for message in messages %}
+            <div style="padding: 15px 20px; border-radius: 10px; margin-bottom: 10px;
+                        background: {% if message.tags == 'success' %}#d4edda{% elif message.tags == 'warning' %}#fff3cd{% else %}#f8d7da{% endif %};
+                        color: {% if message.tags == 'success' %}#155724{% elif message.tags == 'warning' %}#856404{% else %}#721c24{% endif %};
+                        border: 1px solid {% if message.tags == 'success' %}#c3e6cb{% elif message.tags == 'warning' %}#ffeeba{% else %}#f5c6cb{% endif %};">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Фильтр по категориям и поиск -->
         <div style="margin-bottom: 30px;">
-            <form method="get" style="display: flex; gap: 15px; align-items: center;">
+            <form method="get" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                 <select name="category" style="padding: 10px 15px; border: 2px solid var(--border-color); border-radius: 10px; min-width: 200px;">
                     <option value="">Все категории</option>
                     {% for cat in categories %}
                     <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"i" %}selected{% endif %}>{{ cat.name }}</option>
                     {% endfor %}
                 </select>
-                <input type="text" name="search" placeholder="Поиск по названию" value="{{ request.GET.search }}" style="padding: 10px 15px; border: 2px solid var(--border-color); border-radius: 10px; flex: 1;">
-                <button type="submit" class="btn-outline">Применить</button>
-                <a href="{% url 'manage_products' %}" class="btn-outline">Сбросить</a>
+                <input type="text" name="search" placeholder="Поиск по названию" value="{{ request.GET.search }}"
+                       style="padding: 10px 15px; border: 2px solid var(--border-color); border-radius: 10px; flex: 1; min-width: 250px;">
+                <button type="submit" class="btn-outline" style="padding: 10px 25px;">Применить</button>
+                <a href="{% url 'manage_products' %}" class="btn-outline" style="padding: 10px 25px;">Сбросить</a>
             </form>
         </div>
-        
+
         <!-- Список товаров -->
-        <div style="background: white; border-radius: 20px; border: 1px solid var(--border-color); overflow: hidden;">
-            <table style="width: 100%; border-collapse: collapse;">
+        <div style="background: white; border-radius: 20px; border: 1px solid var(--border-color); overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; min-width: 900px;">
                 <thead style="background: var(--border-color);">
                     <tr>
                         <th style="padding: 15px; text-align: left;">Фото</th>
@@ -44,11 +59,11 @@
                 </thead>
                 <tbody>
                     {% for product in products %}
-                    <tr style="border-bottom: 1px solid var(--border-color);">
+                    <tr style="border-bottom: 1px solid var(--border-color); {% if not product.is_active %}opacity: 0.7; background: #f8f8f8;{% endif %}">
                         <td style="padding: 15px;">
                             {% with main_image=product.get_main_image %}
                                 {% if main_image %}
-                                    <img src="{{ main_image.image.url }}" alt="" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+                                    <img src="{{ main_image.image.url }}" alt="{{ product.name }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
                                 {% else %}
                                     <div style="width: 60px; height: 60px; background: var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
                                         <i class="bi bi-image" style="color: var(--text-secondary);"></i>
@@ -56,23 +71,41 @@
                                 {% endif %}
                             {% endwith %}
                         </td>
-                        <td style="padding: 15px; font-weight: 500;">{{ product.name }}</td>
+                        <td style="padding: 15px; font-weight: 500;">
+                            {{ product.name }}
+                            {% if not product.is_active %}
+                                <span style="display: inline-block; margin-left: 8px; padding: 2px 8px; background: #dc3545; color: white; border-radius: 50px; font-size: 0.7rem;">Деактивирован</span>
+                            {% endif %}
+                        </td>
                         <td style="padding: 15px;">{{ product.category.name|default:"-" }}</td>
                         <td style="padding: 15px; font-weight: 600; color: var(--accent-primary);">{{ product.price }} ₽</td>
-                        <td style="padding: 15px;">{{ product.variants.count }} шт.</td>
+                        <td style="padding: 15px;">
+                            <span style="background: var(--border-color); padding: 3px 10px; border-radius: 50px; font-size: 0.85rem;">
+                                {{ product.variants.count }} шт.
+                            </span>
+                        </td>
                         <td style="padding: 15px;">
                             {% if product.is_active %}
-                                <span style="color: #28a745;">Активен</span>
+                                <span style="display: inline-block; padding: 4px 12px; background: #d4edda; color: #155724; border-radius: 50px; font-size: 0.85rem; font-weight: 500;">
+                                    <i class="bi bi-check-circle" style="margin-right: 4px;"></i>Активен
+                                </span>
                             {% else %}
-                                <span style="color: #dc3545;">Неактивен</span>
+                                <span style="display: inline-block; padding: 4px 12px; background: #f8d7da; color: #721c24; border-radius: 50px; font-size: 0.85rem; font-weight: 500;">
+                                    <i class="bi bi-x-circle" style="margin-right: 4px;"></i>Неактивен
+                                </span>
                             {% endif %}
                         </td>
                         <td style="padding: 15px;">
-                            <div style="display: flex; gap: 10px;">
-                                <a href="{% url 'edit_product' product.id %}" style="color: var(--accent-primary); text-decoration: none;">
+                            <div style="display: flex; gap: 15px; align-items: center;">
+                                <a href="{% url 'edit_product' product.id %}"
+                                   style="color: var(--accent-primary); text-decoration: none; font-size: 1.2rem;"
+                                   title="Редактировать">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a href="#" style="color: #dc3545; text-decoration: none;" onclick="return confirm('Удалить товар?')">
+                                <a href="{% url 'delete_product' product.id %}"
+                                   style="color: #dc3545; text-decoration: none; font-size: 1.2rem;"
+                                   title="Удалить"
+                                   onclick="return confirmDelete('{{ product.name }}', {{ product.is_active|yesno:'true,false' }})">
                                     <i class="bi bi-trash"></i>
                                 </a>
                             </div>
@@ -80,14 +113,111 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" style="padding: 40px; text-align: center; color: var(--text-secondary);">
-                            Товары не найдены
+                        <td colspan="7" style="padding: 60px; text-align: center; color: var(--text-secondary);">
+                            <i class="bi bi-box" style="font-size: 3rem; display: block; margin-bottom: 15px; opacity: 0.5;"></i>
+                            <h3 style="margin-bottom: 10px;">Товары не найдены</h3>
+                            <p>Попробуйте изменить параметры фильтрации или создайте новый товар</p>
+                            <a href="{% url 'add_product' %}" class="btn-main" style="margin-top: 15px; display: inline-block;">
+                                <i class="bi bi-plus-lg"></i> Создать товар
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        <!-- Информация о деактивации -->
+        <div style="margin-top: 30px; padding: 20px; background: #F2EDE4; border-radius: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <i class="bi bi-info-circle" style="font-size: 1.5rem;"></i>
+            <div style="flex: 1;">
+                <p style="margin: 0 0 5px 0; font-weight: 500;">Как работает удаление товаров:</p>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Если у товара есть заказы, он будет деактивирован (скрыт с сайта)</li>
+                    <li>Если у товара нет заказов, он будет полностью удален</li>
+                    <li>Деактивированные товары выделены серым фоном</li>
+                </ul>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- Скрипт для подтверждения удаления -->
+<script>
+function confirmDelete(productName, isActive) {
+    let message;
+    if (isActive) {
+        message = `Товар "${productName}" будет деактивирован (скрыт с сайта), так как у него могут быть заказы.\n\nПродолжить?`;
+    } else {
+        message = `Товар "${productName}" будет полностью удален.\n\nВы уверены?`;
+    }
+    return confirm(message);
+}
+
+// Автоматическое скрытие уведомлений через 5 секунд
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('[class*="alert"]');
+        alerts.forEach(alert => {
+            alert.style.transition = 'opacity 0.5s ease';
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 500);
+        });
+    }, 5000);
+});
+</script>
+
+<!-- Дополнительные стили -->
+<style>
+.manage-products-page table tr:hover {
+    background: #fafafa;
+}
+
+.manage-products-page .btn-outline {
+    transition: all 0.2s ease;
+}
+
+.manage-products-page .btn-outline:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.manage-products-page a[title="Редактировать"]:hover {
+    transform: scale(1.1);
+    color: var(--accent-secondary) !important;
+}
+
+.manage-products-page a[title="Удалить"]:hover {
+    transform: scale(1.1);
+    color: #ff0000 !important;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+    .manage-products-page .container {
+        padding: 20px 3%;
+    }
+
+    .manage-products-page form {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .manage-products-page form select,
+    .manage-products-page form input,
+    .manage-products-page form button,
+    .manage-products-page form a {
+        width: 100%;
+    }
+
+    .manage-products-page table {
+        font-size: 0.9rem;
+    }
+
+    .manage-products-page td,
+    .manage-products-page th {
+        padding: 10px !important;
+    }
+}
+</style>
 {% endblock %}

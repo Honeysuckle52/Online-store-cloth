@@ -13,7 +13,7 @@ from .models import (
     Product, ProductVariant, Category, Cart, CartItem,
     Wishlist, Order, OrderStatus, Review, User, Role,
     DeliveryMethod, Transaction, TransactionStatus,
-    Size, Color, Gender, ProductImage
+    Size, Color, Gender, ProductImage, OrderItem
 )
 from .forms import RegisterForm, LoginForm, CheckoutForm, ReviewForm, UserProfileForm, ChangePasswordForm
 from .payments import PaymentService  # Импорт сервиса платежей
@@ -155,10 +155,9 @@ def catalog(request):
     return render(request, "pages/catalog.html", context)
 
 def product_detail(request, slug):
-    """Детальная страница товара"""
     product = get_object_or_404(
         Product.objects.select_related('category', 'gender').prefetch_related(
-            'variants__size', 'variants__color', 'images'
+            'variants__size', 'variants__color', 'images'  # ✅ Загружаем и размеры, и цвета
         ),
         slug=slug,
         is_active=True
@@ -445,21 +444,7 @@ def checkout(request):
                 comment=form.cleaned_data.get('comment', '')
             )
 
-            # Проверяем наличие на складе перед оформлением
-            out_of_stock = []
-            for cart_item in cart.items.select_related('variant__product').all():
-                if cart_item.variant.stock_quantity < cart_item.quantity:
-                    out_of_stock.append(
-                        f"{cart_item.variant.product.name} (��оступно: {cart_item.variant.stock_quantity} шт.)"
-                    )
-
-            if out_of_stock:
-                order.delete()
-                for item_name in out_of_stock:
-                    messages.error(request, f'Недостаточно товара: {item_name}')
-                return redirect('cart')
-
-            # Переносим товары из корзины в заказ (склад НЕ трогаем пока)
+            # Переносим товары из корзины в заказ
             for cart_item in cart.items.select_related('variant__product').all():
                 order.items.create(
                     variant=cart_item.variant,
@@ -469,17 +454,20 @@ def checkout(request):
 
             logger.info(f"Order created: {order.order_number} by user {request.user.id}")
 
-            # Выбираем способ оплаты
+            # Получаем способ оплаты из формы
             payment_method = request.POST.get('payment_method', 'yookassa')
 
+            # Сохраняем способ оплаты в заказ
+            order.payment_method = payment_method
+            order.save()
+
             if payment_method == 'yookassa':
-                # Онлайн-оплата -- корзину НЕ очищаем, склад НЕ уменьшаем
-                # Это произойдет только после подтверждения оплаты
-                order.payment_method = 'yookassa'
-                order.save()
+                # Онлайн-оплата через ЮKassa
+                # Не очищаем корзину и не уменьшаем склад - это произойдет после оплаты
                 return redirect('payment', order_id=order.id)
             else:
-                # Оплата при получении -- списываем со склада и очищаем корзину сразу
+                # Оплата наличными при получении
+                # Списываем товары со склада
                 for order_item in order.items.select_related('variant').all():
                     variant = order_item.variant
                     variant.stock_quantity -= order_item.quantity
@@ -487,14 +475,13 @@ def checkout(request):
                         variant.stock_quantity = 0
                     variant.save()
 
+                # Очищаем корзину
                 cart.items.all().delete()
 
-                status_confirmed, _ = OrderStatus.objects.get_or_create(
-                    name='confirmed',
-                    defaults={'name': 'confirmed'}
-                )
+                # Меняем статус заказа на "подтвержден" или оставляем "created"
+                # В зависимости от вашей логики
+                status_confirmed, _ = OrderStatus.objects.get_or_create(name='confirmed')
                 order.status = status_confirmed
-                order.payment_method = 'cash'
                 order.save()
 
                 # Отправляем email с подтверждением заказа
@@ -518,7 +505,6 @@ def checkout(request):
         "form": form,
         "cart": cart
     })
-
 
 @login_required
 def order_history(request):
@@ -940,9 +926,47 @@ def edit_product(request, product_id=None):
             product.care_instructions = care_instructions
             product.is_active = is_active
             product.save()
+
+            # Обработка вариантов товара - НЕ УДАЛЯЕМ старые, а обновляем/добавляем
+            sizes = request.POST.getlist('size[]')
+            colors = request.POST.getlist('color[]')
+            prices = request.POST.getlist('price[]')
+            stocks = request.POST.getlist('stock[]')
+
+            # Получаем существующие варианты
+            existing_variants = {f"{v.size_id}_{v.color_id}": v for v in product.variants.all()}
+            processed_keys = set()
+
+            # Обновляем или создаем новые варианты
+            for i in range(len(sizes)):
+                if sizes[i] and prices[i] and stocks[i]:
+                    size_id = sizes[i] if sizes[i] else None
+                    color_id = colors[i] if colors[i] else None
+                    variant_key = f"{size_id}_{color_id}"
+
+                    if variant_key in existing_variants:
+                        # Обновляем существующий вариант
+                        variant = existing_variants[variant_key]
+                        variant.price = prices[i]
+                        variant.stock_quantity = stocks[i]
+                        variant.save()
+                        processed_keys.add(variant_key)
+                    else:
+                        # Создаем новый вариант
+                        ProductVariant.objects.create(
+                            product=product,
+                            size_id=size_id,
+                            color_id=color_id,
+                            price=prices[i],
+                            stock_quantity=stocks[i]
+                        )
+
+            # Варианты, которые были удалены из формы, остаются в БД (не удаляем)
+            # Это сохраняет историю заказов
+
             messages.success(request, 'Товар успешно обновлен')
         else:
-            # Создание нового товара
+            # Создание нового товара (как и было)
             from django.utils.text import slugify
             import random
 
@@ -963,35 +987,32 @@ def edit_product(request, product_id=None):
                 care_instructions=care_instructions,
                 is_active=is_active
             )
+
+            # Обработка вариантов товара для нового товара
+            sizes = request.POST.getlist('size[]')
+            colors = request.POST.getlist('color[]')
+            prices = request.POST.getlist('price[]')
+            stocks = request.POST.getlist('stock[]')
+
+            for i in range(len(sizes)):
+                if sizes[i] and prices[i] and stocks[i]:
+                    ProductVariant.objects.create(
+                        product=product,
+                        size_id=sizes[i] if sizes[i] else None,
+                        color_id=colors[i] if colors[i] else None,
+                        price=prices[i],
+                        stock_quantity=stocks[i]
+                    )
+
             messages.success(request, 'Товар успешно создан')
 
-        # Обработка вариантов товара
-        sizes = request.POST.getlist('size[]')
-        colors = request.POST.getlist('color[]')
-        prices = request.POST.getlist('price[]')
-        stocks = request.POST.getlist('stock[]')
-
-        # Удаляем старые варианты
-        product.variants.all().delete()
-
-        # Создаем новые варианты
-        for i in range(len(sizes)):
-            if sizes[i] and prices[i] and stocks[i]:
-                ProductVariant.objects.create(
-                    product=product,
-                    size_id=sizes[i] if sizes[i] else None,
-                    color_id=colors[i] if colors[i] else None,
-                    price=prices[i],
-                    stock_quantity=stocks[i]
-                )
-
-        # Обработка изображений
+        # Обработка изображений (без изменений)
         if request.FILES.getlist('images'):
             for image in request.FILES.getlist('images'):
                 ProductImage.objects.create(
                     product=product,
                     image=image,
-                    is_main=not product.images.exists()  # Первое изображение - главное
+                    is_main=not product.images.exists()
                 )
 
         return redirect('manage_products')
@@ -1038,6 +1059,37 @@ def update_order_status(request, order_id):
         messages.success(request, f'Статус заказа #{order.order_number} обновлен')
 
     return redirect('manage_orders')
+
+
+@user_passes_test(is_moderator)
+def delete_product(request, product_id):
+    """Удаление товара (только если нет связанных заказов)"""
+    product = get_object_or_404(Product, id=product_id)
+
+    # Проверяем, есть ли заказы с этим товаром
+    has_orders = OrderItem.objects.filter(variant__product=product).exists()
+
+    if has_orders:
+        # Если есть заказы, просто деактивируем товар
+        product.is_active = False
+        product.save()
+        messages.warning(request, f'Товар "{product.name}" деактивирован, так как есть связанные заказы')
+    else:
+        # Если заказов нет, удаляем полностью
+        try:
+            # Сначала удаляем связанные изображения из файловой системы
+            for image in product.images.all():
+                if image.image:
+                    image.image.delete()  # Удаляем файл
+            # Удаляем варианты товара
+            product.variants.all().delete()
+            # Удаляем сам товар
+            product.delete()
+            messages.success(request, f'Товар "{product.name}" полностью удален')
+        except Exception as e:
+            messages.error(request, f'Ошибка при удалении товара: {str(e)}')
+
+    return redirect('manage_products')
 
 
 # --- АДМИН ПАНЕЛЬ ---

@@ -274,7 +274,7 @@ class ProductVariant(models.Model):
 class ProductImage(models.Model):
     """Изображение товара"""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images', verbose_name="Товар")
-    image = models.ImageField(upload_to='products/%Y/%m/', verbose_name="Изображение")
+    image = models.ImageField(upload_to='products/', verbose_name="Изображение")  # Убрали %Y/%m/
     is_main = models.BooleanField(default=False, verbose_name="Главное")
     order = models.PositiveIntegerField(default=0, verbose_name="Порядок")
 

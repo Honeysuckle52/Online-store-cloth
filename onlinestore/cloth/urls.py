@@ -46,6 +46,7 @@ urlpatterns = [
     path('manage/products/', views.manage_products, name='manage_products'),
     path('manage/product/add/', views.edit_product, name='add_product'),
     path('manage/product/<int:product_id>/edit/', views.edit_product, name='edit_product'),
+path('manage/product/<int:product_id>/delete/', views.delete_product, name='delete_product'),
 
     # Управление заказами
     path('manage/orders/', views.manage_orders, name='manage_orders'),
