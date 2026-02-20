@@ -46,7 +46,7 @@ def cyrillic_slugify(text):
 
 
 class Command(BaseCommand):
-    help = 'Создание 2 товаров на каждую категорию с полноценными описаниями'
+    help = 'Создание товаров с фиксированными цветами (по 2 на категорию)'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -57,7 +57,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.WARNING('\n' + '=' * 60))
-        self.stdout.write(self.style.WARNING('СОЗДАНИЕ ТОВАРОВ (2 НА КАТЕГОРИЮ)'))
+        self.stdout.write(self.style.WARNING('СОЗДАНИЕ ТОВАРОВ С ФИКСИРОВАННЫМИ ЦВЕТАМИ'))
         self.stdout.write(self.style.WARNING('=' * 60 + '\n'))
 
         # Запрос подтверждения
@@ -73,7 +73,7 @@ class Command(BaseCommand):
         # 2. Удаление старых товаров и связанных данных
         self.delete_old_products()
 
-        # 3. Создание новых товаров (по 2 на категорию)
+        # 3. Создание новых товаров с фиксированными цветами
         self.create_new_products()
 
         # 4. Исправление slug'ов
@@ -125,21 +125,25 @@ class Command(BaseCommand):
             )
             self.stdout.write(f'  {"✓" if not created else "+"} Размер: {size_name}')
 
-        # Цвета
-        colors = [
+        # Цвета - создаем все необходимые цвета
+        colors_data = [
             {'name': 'Черный', 'hex': '#000000'},
             {'name': 'Белый', 'hex': '#FFFFFF'},
             {'name': 'Серый', 'hex': '#808080'},
-            {'name': 'Бежевый', 'hex': '#F5F5DC'},
-            {'name': 'Синий', 'hex': '#0000FF'},
             {'name': 'Красный', 'hex': '#FF0000'},
+            {'name': 'Синий', 'hex': '#0000FF'},
             {'name': 'Зеленый', 'hex': '#008000'},
+            {'name': 'Коричневый', 'hex': '#8B4513'},
+            {'name': 'Бежевый', 'hex': '#F5F5DC'},
         ]
-        for color in colors:
+
+        colors_dict = {}
+        for color in colors_data:
             col, created = Color.objects.get_or_create(
                 name=color['name'],
                 defaults={'hex_code': color['hex']}
             )
+            colors_dict[color['name']] = col
             self.stdout.write(f'  {"✓" if not created else "+"} Цвет: {color["name"]}')
 
         # Категории
@@ -171,6 +175,9 @@ class Command(BaseCommand):
                 last_name='Admin'
             )
             self.stdout.write('  + Суперпользователь: admin@clothstore.ru / admin123')
+
+        # Сохраняем цвета в атрибутах команды для использования в create_new_products
+        self.colors = colors_dict
 
     def delete_old_products(self):
         """Удаление всех старых товаров и связанных данных"""
@@ -227,13 +234,11 @@ class Command(BaseCommand):
         self.stdout.write(f'  Удалено файлов изображений: {file_count}')
 
     def create_new_products(self):
-        """Создание новых товаров (ровно 2 на категорию)"""
-        self.stdout.write('\n✨ Создание новых товаров (2 на категорию)...')
+        """Создание новых товаров с фиксированными цветами"""
+        self.stdout.write('\n✨ Создание новых товаров с фиксированными цветами...')
 
         categories = Category.objects.all()
         sizes = Size.objects.all()
-        colors = Color.objects.all()
-        color_list = list(colors)
 
         # Проверяем наличие изображений
         media_path = settings.MEDIA_ROOT / 'products'
@@ -241,7 +246,45 @@ class Command(BaseCommand):
 
         created_count = 0
 
-        # Шаблоны товаров для каждой категории с ПОЛНОЦЕННЫМИ описаниями
+        # Словарь с фиксированными цветами для каждого товара
+        product_colors = {
+            # Юбки
+            'Юбка плиссе': 'Синий',
+            'Юбка-карандаш': 'Серый',
+
+            # Футболки
+            'Оверсайз футболка': 'Черный',
+            'Базовая футболка': 'Зеленый',
+
+            # Свитеры
+            'Тонкий джемпер': 'Белый',
+            'Вязаный свитер': 'Черный',
+
+            # Рубашки
+            'Льняная рубашка': 'Коричневый',
+            'Классическая рубашка': 'Красный',
+
+            # Платья
+            'Платье-рубашка': 'Белый',
+            'Летнее платье': 'Серый',
+
+            # Джинсы
+            'Джинсы с высокой талией': 'Черный',
+            'Классические джинсы': 'Красный',
+
+            # Верхняя одежда
+            'Легкая ветровка': 'Белый',
+            'Джинсовая куртка': 'Синий',
+
+            # Брюки
+            'Чиносы': 'Коричневый',
+            'Классические брюки': 'Черный',
+
+            # Аксессуары
+            'Шапка': 'Бежевый',
+        }
+
+        # Шаблоны товаров для каждой категории
         product_templates = {
             'jeans': [
                 {
@@ -414,9 +457,15 @@ class Command(BaseCommand):
                 ]
 
             for template in templates:
-                # Выбираем случайный цвет для каждого товара
-                random_color = random.choice(color_list)
+                # Получаем фиксированный цвет из словаря или выбираем случайный
+                color_name = product_colors.get(template['name'])
 
+                if not color_name:
+                    # Если цвет не указан, выбираем случайный
+                    color_name = random.choice(
+                        ['Черный', 'Белый', 'Серый', 'Красный', 'Синий', 'Зеленый', 'Коричневый', 'Бежевый'])
+
+                color = Color.objects.get(name=color_name)
                 product_name = template['name']
 
                 # Проверяем, существует ли уже такой товар
@@ -436,7 +485,7 @@ class Command(BaseCommand):
                         slug = f'{base_slug}-{counter}'
                         counter += 1
 
-                    # Создаем товар с ПОЛНОЦЕННЫМ описанием
+                    # Создаем товар
                     product = Product.objects.create(
                         category=category,
                         name=product_name,
@@ -459,7 +508,7 @@ class Command(BaseCommand):
                                 is_main=True
                             )
 
-                    # Создаем варианты для разных размеров с выбранным цветом
+                    # Создаем варианты для разных размеров с фиксированным цветом
                     variant_count = 0
                     for size in sizes:
                         # Случайное количество на складе
@@ -472,7 +521,7 @@ class Command(BaseCommand):
                         ProductVariant.objects.create(
                             product=product,
                             size=size,
-                            color=random_color,
+                            color=color,
                             price=max(Decimal('100'), round(variant_price, -1)),
                             stock_quantity=stock
                         )
@@ -480,7 +529,7 @@ class Command(BaseCommand):
 
                     created_count += 1
                     self.stdout.write(self.style.SUCCESS(
-                        f'  ✓ {product_name} (цвет: {random_color.name}) - {variant_count} размеров'))
+                        f'  ✓ {product_name} (цвет: {color_name}) - {variant_count} размеров'))
 
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f'  ✗ Ошибка: {product_name} - {str(e)}'))
