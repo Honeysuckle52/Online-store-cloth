@@ -906,12 +906,45 @@ def edit_product(request, product_id=None):
         # Базовая логика сохранения товара
         name = request.POST.get('name')
         description = request.POST.get('description')
-        price = request.POST.get('price')
+        price_str = request.POST.get('price')
         category_id = request.POST.get('category')
         gender_id = request.POST.get('gender')
         material = request.POST.get('material')
         care_instructions = request.POST.get('care_instructions')
         is_active = request.POST.get('is_active') == 'on'
+
+        # Валидация цены
+        try:
+            price = Decimal(price_str)
+            # Проверяем, что цена не превышает максимально допустимую
+            max_price = Decimal('99999999.99')
+            if price > max_price:
+                messages.error(request, f'Цена слишком большая! Максимально допустимая цена: 99,999,999.99 ₽')
+                return render(request, "pages/edit_product.html", {
+                    'product': product,
+                    'categories': Category.objects.all(),
+                    'genders': Gender.objects.all(),
+                    'sizes': Size.objects.all(),
+                    'colors': Color.objects.all()
+                })
+            if price < 0:
+                messages.error(request, 'Цена не может быть отрицательной')
+                return render(request, "pages/edit_product.html", {
+                    'product': product,
+                    'categories': Category.objects.all(),
+                    'genders': Gender.objects.all(),
+                    'sizes': Size.objects.all(),
+                    'colors': Color.objects.all()
+                })
+        except (ValueError, DecimalException):
+            messages.error(request, 'Введите корректное числовое значение цены')
+            return render(request, "pages/edit_product.html", {
+                'product': product,
+                'categories': Category.objects.all(),
+                'genders': Gender.objects.all(),
+                'sizes': Size.objects.all(),
+                'colors': Color.objects.all()
+            })
 
         if product:
             # Обновление существующего товара
@@ -927,7 +960,7 @@ def edit_product(request, product_id=None):
             product.is_active = is_active
             product.save()
 
-            # Обработка вариантов товара - НЕ УДАЛЯЕМ старые, а обновляем/добавляем
+            # Обработка вариантов товара
             sizes = request.POST.getlist('size[]')
             colors = request.POST.getlist('color[]')
             prices = request.POST.getlist('price[]')
@@ -940,6 +973,19 @@ def edit_product(request, product_id=None):
             # Обновляем или создаем новые варианты
             for i in range(len(sizes)):
                 if sizes[i] and prices[i] and stocks[i]:
+                    try:
+                        variant_price = Decimal(prices[i])
+                        # Проверяем цену варианта
+                        if variant_price > Decimal('99999999.99'):
+                            messages.warning(request, f'Цена варианта {i+1} слишком большая, установлена максимальная')
+                            variant_price = Decimal('99999999.99')
+                        if variant_price < 0:
+                            messages.warning(request, f'Цена варианта {i+1} отрицательная, установлена 0')
+                            variant_price = Decimal('0')
+                    except (ValueError, DecimalException):
+                        messages.error(request, f'Введите корректную цену для варианта {i+1}')
+                        continue
+
                     size_id = sizes[i] if sizes[i] else None
                     color_id = colors[i] if colors[i] else None
                     variant_key = f"{size_id}_{color_id}"
@@ -947,8 +993,8 @@ def edit_product(request, product_id=None):
                     if variant_key in existing_variants:
                         # Обновляем существующий вариант
                         variant = existing_variants[variant_key]
-                        variant.price = prices[i]
-                        variant.stock_quantity = stocks[i]
+                        variant.price = variant_price
+                        variant.stock_quantity = int(stocks[i]) if stocks[i] else 0
                         variant.save()
                         processed_keys.add(variant_key)
                     else:
@@ -957,16 +1003,13 @@ def edit_product(request, product_id=None):
                             product=product,
                             size_id=size_id,
                             color_id=color_id,
-                            price=prices[i],
-                            stock_quantity=stocks[i]
+                            price=variant_price,
+                            stock_quantity=int(stocks[i]) if stocks[i] else 0
                         )
-
-            # Варианты, которые были удалены из формы, остаются в БД (не удаляем)
-            # Это сохраняет историю заказов
 
             messages.success(request, 'Товар успешно обновлен')
         else:
-            # Создание нового товара (как и было)
+            # Создание нового товара
             from django.utils.text import slugify
             import random
 
@@ -996,17 +1039,30 @@ def edit_product(request, product_id=None):
 
             for i in range(len(sizes)):
                 if sizes[i] and prices[i] and stocks[i]:
+                    try:
+                        variant_price = Decimal(prices[i])
+                        # Проверяем цену варианта
+                        if variant_price > Decimal('99999999.99'):
+                            messages.warning(request, f'Цена варианта {i+1} слишком большая, установлена максимальная')
+                            variant_price = Decimal('99999999.99')
+                        if variant_price < 0:
+                            messages.warning(request, f'Цена варианта {i+1} отрицательная, установлена 0')
+                            variant_price = Decimal('0')
+                    except (ValueError, DecimalException):
+                        messages.error(request, f'Введите корректную цену для варианта {i+1}')
+                        continue
+
                     ProductVariant.objects.create(
                         product=product,
                         size_id=sizes[i] if sizes[i] else None,
                         color_id=colors[i] if colors[i] else None,
-                        price=prices[i],
-                        stock_quantity=stocks[i]
+                        price=variant_price,
+                        stock_quantity=int(stocks[i]) if stocks[i] else 0
                     )
 
             messages.success(request, 'Товар успешно создан')
 
-        # Обработка изображений (без изменений)
+        # Обработка изображений
         if request.FILES.getlist('images'):
             for image in request.FILES.getlist('images'):
                 ProductImage.objects.create(
