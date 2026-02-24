@@ -94,16 +94,16 @@ EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 EMAIL_TIMEOUT = 30
 
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'danil_naumov_90@bk.ru')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'fDwwurqGAMSfNry3JlZU')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
-DEFAULT_FROM_EMAIL = f'CLOTH <{EMAIL_HOST_USER}>'
+DEFAULT_FROM_EMAIL = f'CLOTH<{EMAIL_HOST_USER}>'
 
 # Таймаут для SMTP соединения (секунды)
 EMAIL_TIMEOUT = 30
 
-YOOKASSA_SHOP_ID = os.environ.get('YOOKASSA_SHOP_ID', '1225524')
-YOOKASSA_SECRET_KEY = os.environ.get('YOOKASSA_SECRET_KEY', 'test_-W5gL0m29-Vj5oYnjMBKZ62jHkNiMBFdsmiaZeGhiQs')
+YOOKASSA_SHOP_ID = os.environ.get('YOOKASSA_SHOP_ID', '')
+YOOKASSA_SECRET_KEY = os.environ.get('YOOKASSA_SECRET_KEY', '')
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
